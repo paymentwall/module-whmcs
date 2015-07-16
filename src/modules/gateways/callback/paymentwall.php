@@ -27,7 +27,7 @@ if ($pingback->validate()) {
     $userData = mysql_fetch_array(select_query('tblclients', 'email, firstname, lastname, country, address1, state, phonenumber, postcode, city', array("id" => $orderData['userid'])));
     if ($pingback->isDeliverable()) {
         addInvoicePayment($invoiceid, $_GET['ref'], null, null, $invoiceData['paymentmethod']);
-        if(isset($gateway['enableDeliveryApi']) && $gateway['enableDeliveryApi'] != '') {
+        if (isset($gateway['enableDeliveryApi']) && $gateway['enableDeliveryApi'] != '') {
             $delivery = new Paymentwall_GenerericApiObject('delivery');
             $response = $delivery->post(array(
                 'payment_id' => $_GET['ref'],
@@ -55,9 +55,14 @@ if ($pingback->validate()) {
                 var_dump($response['error'], $response['notices']);
             }
         }
-    } else {
-        $orderData = mysql_fetch_row(select_query("tblorders", "id", array("invoiceid" => $invoiceid)));
-        localAPI("cancelorder", $orderData[0]);
+    } elseif ($pingback->isCancelable()) {
+        $cancelStatus = mysql_fetch_row(select_query("tblorderstatuses", "title", array("showcancelled" => 1)));
+        // Update invoice for Cancel Order
+        localAPI('updateinvoice', array(
+            'invoiceid' => $invoiceid,
+            'status' => $cancelStatus[0]
+        ), 'admin');
+        update_query('tblorders', array("status" => $cancelStatus[0]), array("invoiceid" => $invoiceid));
     }
     echo 'OK';
 } else {
