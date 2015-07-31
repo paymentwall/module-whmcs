@@ -1,13 +1,21 @@
 <?php
 
 # Required File Includes
-include("../../../dbconnect.php");
-include("../../../includes/functions.php");
-include("../../../includes/gatewayfunctions.php");
-include("../../../includes/invoicefunctions.php");
+if (file_exists("../../../init.php")) { // For new version
+    include("../../../init.php");
+    $whmcs->load_function('gateway');
+    $whmcs->load_function('invoice');
+} else {
+    include("../../../dbconnect.php");
+    include("../../../includes/functions.php");
+    include("../../../includes/gatewayfunctions.php");
+    include("../../../includes/invoicefunctions.php");
+}
+
 require_once("../../../includes/api/paymentwall_api/lib/paymentwall.php");
 
 $gateway = getGatewayVariables("paymentwall");
+
 if (!$gateway["type"]) {
     die("Module Not Activated");
 }
@@ -51,23 +59,17 @@ if ($pingback->validate()) {
                 'is_test' => isset($gateway['isTest']) ? 1 : 0,
                 'product_description' => '',
             ));
-            if (isset($response['error'])) {
-                var_dump($response['error'], $response['notices']);
-            }
         }
     } elseif ($pingback->isCancelable()) {
         $cancelStatus = mysql_fetch_row(select_query("tblorderstatuses", "title", array("showcancelled" => 1)));
-        // Update invoice for Cancel Order
+        // Update payment status
         localAPI('updateinvoice', array(
             'invoiceid' => $invoiceid,
             'status' => $cancelStatus[0]
         ), 'admin');
-        update_query('tblorders', array("status" => $cancelStatus[0]), array("invoiceid" => $invoiceid));
     }
     echo 'OK';
 } else {
     echo $pingback->getErrorSummary();
 }
 die;
-
-?>
