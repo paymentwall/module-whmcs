@@ -29,16 +29,16 @@ Paymentwall_Config::getInstance()->set(array(
 $pingback = new Paymentwall_Pingback($_GET, $_SERVER['REMOTE_ADDR']);
 
 if ($pingback->validate()) {
-    $invoiceid = checkCbInvoiceID($_GET['goodsid'], $gateway["name"]);
+    $invoiceid = checkCbInvoiceID($pingback->getProductId(), $gateway["name"]);
     $invoiceData = mysql_fetch_array(select_query("tblinvoices", "subtotal, paymentmethod", array("id" => $invoiceid)));
     $orderData = mysql_fetch_array(select_query('tblorders', 'userid', array("invoiceid" => $invoiceid)));
     $userData = mysql_fetch_array(select_query('tblclients', 'email, firstname, lastname, country, address1, state, phonenumber, postcode, city', array("id" => $orderData['userid'])));
     if ($pingback->isDeliverable()) {
-        addInvoicePayment($invoiceid, $_GET['ref'], null, null, $invoiceData['paymentmethod']);
+        addInvoicePayment($invoiceid, $pingback->getReferenceId(), null, null, $invoiceData['paymentmethod']);
         if (isset($gateway['enableDeliveryApi']) && $gateway['enableDeliveryApi'] != '') {
             $delivery = new Paymentwall_GenerericApiObject('delivery');
             $response = $delivery->post(array(
-                'payment_id' => $_GET['ref'],
+                'payment_id' => $pingback->getReferenceId(),
                 //'type' => 'physical',
                 'type' => 'digital',
                 'status' => 'delivered',
