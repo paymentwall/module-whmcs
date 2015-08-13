@@ -39,13 +39,30 @@ function paymentwall_link($params)
                 Paymentwall_Product::TYPE_FIXED
             )
         ),
-        array(
-            'integration_module' => 'whmcs',
-            'is_test' => (isset($params['isTest']) && $params['isTest'] != '') ? 1 : 0
+        array_merge(
+            array(
+                'integration_module' => 'whmcs',
+                'is_test' => (isset($params['isTest']) && $params['isTest'] != '') ? 1 : 0
+            ),
+            get_user_profile_data($params)
         )
     );
     $widgetUrl = $widget->getUrl();
     $code = '<form method=POST action="' . $widgetUrl . '"><a href="' . $widgetUrl .'"><img src="' . $params['systemurl'] . '/images/paymentwall/button_buy_white_yellow.png" alt="Paymentwall logo" height="34" width="153" /></a></form>';
 
     return $code;
+}
+
+function get_user_profile_data($params){
+
+    return array(
+        'customer[city]' => $params['clientdetails']['city'],
+        'customer[state]' => $params['clientdetails']['fullstate'],
+        'customer[address]' => $params['clientdetails']['address1'],
+        'customer[country]' => $params['clientdetails']['countrycode'],
+        'customer[zip]' => $params['clientdetails']['postcode'],
+        'customer[username]' => $params['clientdetails']['userid'] ? $params['clientdetails']['userid'] : $params['clientdetails']['email'],
+        'customer[firstname]' => $params['clientdetails']['firstname'],
+        'customer[lastname]' => $params['clientdetails']['lastname'],
+    );
 }
