@@ -26,14 +26,7 @@ function init_paymentwall_config($params)
 function paymentwall_link($params)
 {
     init_paymentwall_config($params);
-    $shippingParams = getShippingParams($params);
-    $extraParams = array_merge(
-        $shippingParams,
-        array(
-            'integration_module' => 'whmcs',
-            'is_test' => (isset($params['isTest']) && $params['isTest'] != '') ? 1 : 0
-        )
-    );
+
     $widget = new Paymentwall_Widget(
         $params['clientdetails']['email'],
         $params['widget'],
@@ -46,47 +39,13 @@ function paymentwall_link($params)
                 Paymentwall_Product::TYPE_FIXED
             )
         ),
-        $extraParams
+        array(
+            'integration_module' => 'whmcs',
+            'is_test' => (isset($params['isTest']) && $params['isTest'] != '') ? 1 : 0
+        )
     );
     $widgetUrl = $widget->getUrl();
     $code = '<form method=POST action="' . $widgetUrl . '"><a href="' . $widgetUrl .'"><img src="' . $params['systemurl'] . '/images/paymentwall/button_buy_white_yellow.png" alt="Paymentwall logo" height="34" width="153" /></a></form>';
 
     return $code;
 }
-
-function getShippingParams($params)
-{
-
-    return array(
-        'customer' => array(
-            'email' => $params['clientdetails']['email'],
-            'firstname' => $params['clientdetails']['firstname'],
-            'lastname' => $params['clientdetails']['lastname'],
-            'street1' => $params['clientdetails']['address1'],
-            'street2' => $params['clientdetails']['address2'],
-            'city' => $params['clientdetails']['city'],
-            'state' => $params['clientdetails']['state'],
-            'postcode' => $params['clientdetails']['postcode'],
-            'country' => $params['clientdetails']['country'],
-            'phone' => $params['clientdetails']['phonenumber']
-        ),
-        'shipping_address' => array(
-            'firstname' => $params['clientdetails']['firstname'],
-            'lastname' => $params['clientdetails']['lastname'],
-            'company' => $params['companyname'],
-            'street1' => $params['clientdetails']['address1'],
-            'street2' => $params['clientdetails']['address2'],
-            'city' => $params['clientdetails']['city'],
-            'state' => $params['clientdetails']['state'],
-            'postcode' => $params['clientdetails']['postcode'],
-            'country' => $params['clientdetails']['country'],
-            'phone' => $params['clientdetails']['phonenumber']
-        ),
-        'shipping_fee' => array(
-            'amount' => 0,
-            'currency' => $params['currency']
-        )
-    );
-}
-
-?>
