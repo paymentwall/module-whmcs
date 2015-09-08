@@ -48,7 +48,7 @@ function paymentwall_link($params)
         )
     );
     $widgetUrl = $widget->getUrl();
-    $code = '<form method=POST action="' . $widgetUrl . '"><a href="' . $widgetUrl .'"><img src="' . $params['systemurl'] . '/images/paymentwall/button_buy_white_yellow.png" alt="Paymentwall logo" height="34" width="153" /></a></form>';
+    $code = '<form method=POST action="' . $widgetUrl . '"><a href="' . $widgetUrl .'"><img src="' . $params['systemurl'] . '/images/paymentwall/paymentwall_button.png" alt="Paymentwall logo" /></a></form>';
 
     return $code;
 }
