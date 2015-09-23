@@ -15,7 +15,7 @@ function paymentwall_config()
 
 function init_paymentwall_config($params)
 {
-    require_once(getcwd() . '/includes/api/paymentwall_api/lib/paymentwall.php');
+    require_once(ROOTDIR . '/includes/api/paymentwall_api/lib/paymentwall.php');
     Paymentwall_Config::getInstance()->set(array(
         'api_type' => Paymentwall_Config::API_GOODS,
         'public_key' => $params['appKey'], // available in your Paymentwall merchant area
@@ -47,14 +47,20 @@ function paymentwall_link($params)
             get_user_profile_data($params)
         )
     );
-    $widgetUrl = $widget->getUrl();
-    $code = '<form method=POST action="' . $widgetUrl . '"><a href="' . $widgetUrl .'"><img src="' . $params['systemurl'] . '/images/paymentwall/paymentwall_button.png" alt="Paymentwall logo" /></a></form>';
+    $widgetUrl = $params['systemurl'] . '/paymentwallwidget.php';
+    $code = '<form method=POST action="' . $widgetUrl . '">
+        <input type="hidden" name="data" value="' . encrypt($widget->getHtmlCode(array(
+            'width' => '100%',
+            'height' => '500'
+        ))) . '" />
+        <button type="submit">Pay via <img src="' . $params['systemurl'] . '/images/paymentwall/paymentwall_logo.png" alt="Pay via Paymentwall" /></button>
+    </form>';
 
     return $code;
 }
 
-function get_user_profile_data($params){
-
+function get_user_profile_data($params)
+{
     return array(
         'customer[city]' => $params['clientdetails']['city'],
         'customer[state]' => $params['clientdetails']['fullstate'],
