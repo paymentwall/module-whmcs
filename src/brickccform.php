@@ -74,13 +74,16 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
             if ($charge->isSuccessful()) {
                 if ($charge->isCaptured()) {
                     addInvoicePayment($_POST["invoiceid"], $charge->getId(), null, null, 'brick');
+                    logTransaction($gateway["name"], $cardInfo, "Successful");
                 } elseif ($charge->isUnderReview()) {
                     // decide on risk charge
+                    logTransaction($gateway["name"], $cardInfo, "Unsuccessful");
                 }
                 $smartyvalues["success"] = true;
             } else {
                 $error = json_decode($response, true);
                 $smartyvalues["processingerror"] = '<li>' . $error['error']['message'] . '</li>';
+                logTransaction($gateway["name"], $cardInfo, "Unsuccessful");
             }
 
         }

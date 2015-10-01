@@ -29,6 +29,7 @@ if ($invoiceid && $pingback->validate()) {
     if ($pingback->isDeliverable()) {
 
         addInvoicePayment($invoiceid, $pingback->getReferenceId(), null, null, 'paymentwall');
+        logTransaction($gateway["name"], $_GET, "Successful");
 
         // Check enable delivery request
         if (isset($gateway['enableDeliveryApi']) && $gateway['enableDeliveryApi'] != '') {
@@ -88,23 +89,17 @@ if ($invoiceid && $pingback->validate()) {
 
         }
     } elseif ($pingback->isCancelable()) {
-        $cancelStatus = mysql_fetch_assoc(select_query("tblorderstatuses", "title", array("showcancelled" => 1)));
-        // Update payment status
-        localAPI('updateinvoice', array(
-            'invoiceid' => $invoiceid,
-            'status' => $cancelStatus['title']
-        ), 'admin');
+        logTransaction($gateway["name"], $_GET, "Not Supported");
     }
     echo 'OK';
 } else {
     echo $pingback->getErrorSummary();
+    logTransaction($gateway["name"], $_GET, "Unsuccessful");
 }
+die();
 
 function send_delivery($data)
 {
     $delivery = new Paymentwall_GenerericApiObject('delivery');
     $response = $delivery->post($data);
 }
-
-logTransaction($gateway["name"], $_GET, "");
-die;
