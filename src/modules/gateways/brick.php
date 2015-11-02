@@ -28,23 +28,21 @@ function init_brick_config($params)
 
 function brick_link($params)
 {
-    global $CONFIG;
-
     init_brick_config($params);
     # Invoice Variables
     $invoiceid = $params['invoiceid'];
 
     # Enter your code submit to the gateway...
-    $code = '<form method="post" action="' . $CONFIG['SystemURL'] . '/brickccform.php">
-			<input type="hidden" name="data" value="' . encrypt(json_encode(array(
+    $code = '<form method="post" action="' . $params['systemurl'] . '/brickccform.php">
+            <input type="hidden" name="data" value="' . encrypt(json_encode(array(
             'invoiceid' => $params['invoiceid'],
             'description' => $params['description'],
             'amount' => $params['amount'],
             'currency' => $params['currency']
         ))) . '" />
-			<input type="hidden" name="invoiceid" value="' . $invoiceid . '" />
-			<input type="hidden" name="frominvoice" value="true" />
-			<button type="submit">Pay via <img src="' . $CONFIG['SystemURL'] . '/images/paymentwall/brick_logo.png" alt="Pay via Brick" /></button>
-			</form>';
+            <input type="hidden" name="invoiceid" value="' . $invoiceid . '" />
+            <input type="hidden" name="frominvoice" value="true" />
+            <button type="submit"><img src="' . $params['systemurl'] . '/images/paymentwall/brick_logo.png" alt="Pay via Brick" /></button>
+            </form>';
     return $code;
 }
