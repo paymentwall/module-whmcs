@@ -1,9 +1,3 @@
-{if $whmcsVer <= 5}
-	{include file="$template/pageheader.tpl" showbreadcrumb=false}
-{else}
-	{include file="$template/includes/pageheader.tpl" showbreadcrumb=false}
-{/if}
-
 {if $success != true}
 	<div class="alert alert-danger" id="payment-errors" {if !$processingerror}style="display: none"{/if}>
 		<strong>The following errors occurred:</strong>
