@@ -1,8 +1,16 @@
 <?php
 # Required File Includes
-include("../../../init.php");
-$whmcs->load_function('gateway');
-$whmcs->load_function('invoice');
+if (!file_exists("../../../init.php")) {
+    // For v5.x
+    include("../../../dbconnect.php");
+} else {
+    // For v6.x
+    include("../../../init.php");
+}
+
+include("../../../includes/functions.php");
+include("../../../includes/gatewayfunctions.php");
+include("../../../includes/invoicefunctions.php");
 
 define('PW_WHMCS_ITEM_TYPE_HOSTING', 'Hosting');
 
@@ -62,8 +70,7 @@ if ($invoiceid && $pingback->validate()) {
  * @param $userData
  * @param $orderData
  */
-function processDeliverable($invoiceid, $pingback, $gateway, $userData, $orderData)
-{
+function processDeliverable($invoiceid, $pingback, $gateway, $userData, $orderData) {
     addInvoicePayment($invoiceid, $pingback->getReferenceId(), null, null, 'paymentwall');
 
     $invoiceItems = select_query(
@@ -101,8 +108,7 @@ function processDeliverable($invoiceid, $pingback, $gateway, $userData, $orderDa
  * @param $subscriptionId
  * @param $conditions
  */
-function updateSubscriptionId($subscriptionId, $conditions)
-{
+function updateSubscriptionId($subscriptionId, $conditions) {
     update_query('tblhosting', array('subscriptionid' => $subscriptionId), $conditions);
 }
 
@@ -113,8 +119,7 @@ function updateSubscriptionId($subscriptionId, $conditions)
  * @param $orderData
  * @param $pingback
  */
-function sendDeliveryApiRequest($invoiceid, $hosting, $userData, $orderData, $pingback)
-{
+function sendDeliveryApiRequest($invoiceid, $hosting, $userData, $orderData, $pingback) {
     // Get Delivery data from DB
     $deliveryData = mysql_fetch_assoc(select_query('pw_delivery_data', '*', array(
         "package_id" => $hosting['packageid'],
@@ -151,8 +156,7 @@ function sendDeliveryApiRequest($invoiceid, $hosting, $userData, $orderData, $pi
  * @param $invoiceId
  * @param $refId
  */
-function updateDeliveryStatus($deliveryId, $status, $data, $invoiceId, $refId)
-{
+function updateDeliveryStatus($deliveryId, $status, $data, $invoiceId, $refId) {
     update_query('pw_delivery_data', array(
         'status' => $status,
         'reference_id' => $refId,
@@ -168,8 +172,7 @@ function updateDeliveryStatus($deliveryId, $status, $data, $invoiceId, $refId)
  * @param $invoiceItems
  * @return mixed
  */
-function getHostId($invoiceItems)
-{
+function getHostId($invoiceItems) {
     while ($item = mysql_fetch_assoc($invoiceItems)) {
         if ($item['relid'] != 0 && $item['type'] == PW_WHMCS_ITEM_TYPE_HOSTING) {
             return $item['relid'];
