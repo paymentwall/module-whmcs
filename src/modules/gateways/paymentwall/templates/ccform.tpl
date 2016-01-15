@@ -58,7 +58,7 @@
 				<label for="inputCardNumber" class="col-sm-4 control-label">Card Number</label>
 
 				<div class="col-sm-7">
-					<input type="text" name="ccnumber" data-brick="card-number" id="inputCardNumber" size="30" value="" autocomplete="off"
+					<input type="text" data-brick="card-number" id="inputCardNumber" size="30" value="" autocomplete="off"
 					       class="form-control newccinfo">
 				</div>
 			</div>
@@ -66,12 +66,12 @@
 				<label for="inputCardExpiry" class="col-sm-4 control-label">Expiry Date</label>
 
 				<div class="col-sm-8">
-					<select name="ccexpirymonth" data-brick="card-expiration-month" id="inputCardExpiry" class="form-control select-inline">
+					<select data-brick="card-expiration-month" id="inputCardExpiry" class="form-control select-inline">
 						{foreach from=$months item=month}
 							<option value="{$month}">{$month}</option>
 						{/foreach}
 					</select>
-					<select name="ccexpiryyear" data-brick="card-expiration-year" id="inputCardExpiryYear" class="form-control select-inline">
+					<select data-brick="card-expiration-year" id="inputCardExpiryYear" class="form-control select-inline">
 						{foreach from=$years item=year}
 							<option value="{$year}">{$year}</option>
 						{/foreach}
@@ -82,7 +82,7 @@
 				<label for="cctype" class="col-sm-4 control-label">CVV/CVC2 Number</label>
 
 				<div class="col-sm-7">
-					<input type="text" data-brick="card-cvv" name="cccvv" id="inputCardCvv" autocomplete="off"
+					<input type="text" data-brick="card-cvv" id="inputCardCvv" autocomplete="off"
 					       class="form-control input-inline input-inline-100" maxlength="4">
 					<button type="button" class="btn btn-link" data-toggle="popover"
 					        data-content="<img src='{$systemurl}assets/img/ccv.gif' width='210' />"
