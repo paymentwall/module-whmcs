@@ -39,9 +39,7 @@ if ($invoiceid && $pingback->validate()) {
     if ($pingback->isDeliverable()) {
         processDeliverable($invoiceid, $pingback, $gateway, $userData, $orderData);
     } elseif ($pingback->isCancelable()) {
-        // WHMCS not supported
-        logTransaction($gateway["name"], $_GET, "Not Supported");
-        die("Not Supported");
+        processCancelable($orderData);
     } else {
         switch ($pingback->getType()) {
             /*
@@ -102,6 +100,40 @@ function processDeliverable($invoiceid, $pingback, $gateway, $userData, $orderDa
     }
 
     logTransaction($gateway['name'], $_GET, "Successful");
+}
+
+/**
+ * @param $orderData
+ */
+function processCancelable($orderData) {
+    if (empty($orderData)) {
+        logTransaction($gateway["name"], $_GET, "Unsuccessful");
+        die("Order ID not found or Status not Pending !");
+    }
+
+    $orderId = $orderData['id'];
+    $result = select_query("tblorders", "", array("id" => $orderId, "status" => "Pending"));
+
+    if (mysql_num_rows($result) > 0) {
+        updateOrderStatus($orderId, "Cancelled");
+        logTransaction($gateway["name"], $_GET, "Successful");
+    } else {
+        logTransaction($gateway["name"], $_GET, "Unsuccessful");
+        die("Order ID not found or Status not Pending !");
+    }
+}
+
+/**
+ * @param $orderId
+ * @param $status 
+ */
+function updateOrderStatus($orderId = null, $status) {
+    if (empty($orderId)) {
+        die("Order not found !");
+    } 
+    update_query('tblorders', array(
+        'status' => $status
+    ), array('id' => $orderId));
 }
 
 /**
