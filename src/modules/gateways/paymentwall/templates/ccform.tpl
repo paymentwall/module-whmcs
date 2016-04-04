@@ -1,4 +1,5 @@
 {if $success != true}
+	{$formHTML}
 	<div class="alert alert-danger" id="payment-errors" {if !$processingerror}style="display: none"{/if}>
 		<strong>The following errors occurred:</strong>
 		<ul id="error-list">
@@ -104,7 +105,7 @@
 		<input name="data" type="hidden" value="{$data}"/>
 		<input name="invoiceid" type="hidden" value="{$invoiceid}"/>
 	</form>
-	<script src="https://api.paymentwall.com/brick/brick.1.3.js"></script>
+	<script src="https://api.paymentwall.com/brick/brick.1.4.js"></script>
 	<script type="text/javascript">
 		$(document).ready(function () {
 			var publicKey = '{$publicKey}';
@@ -145,7 +146,7 @@
 				});
 				return false;
 			});
-			{/literal}
+			{/literal} 
 		});
 	</script>
 	<div style="clear: both"></div>
