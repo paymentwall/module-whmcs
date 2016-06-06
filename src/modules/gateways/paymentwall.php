@@ -15,6 +15,7 @@ function paymentwall_config()
         "enableDeliveryApi" => array("FriendlyName" => "Enable Delivery Api", "Type" => "yesno", "Description" => "Tick this box to enable Delivery Confirmation API",),
         "forceOneTime" => array("FriendlyName" => "Force Onetime Payments", "Type" => "yesno", "Description" => "Only use the Onetime button when checkout"),
         "forceSubscription" => array("FriendlyName" => "Force Subscription Payments", "Type" => "yesno", "Description" => "Only use the Subscription button when checkout, hide Onetime button"),
+        "forceHttps" => array("FriendlyName" => "Force Https Site", "Type" => "yesno", "Description" => "Only use https when to redirecting to the payment page."),
     );
 
     return $configs;
@@ -178,11 +179,15 @@ function get_period_type($recurringCycleUnits)
  */
 function get_widget_code($widget, $params, $type)
 {
-    return '<form method=POST action="' . $params['systemurl'] . '/paymentwallwidget.php" style="display:inline;">
+    $systemUrl = $params['systemurl'];
+    if($params['forceHttps'] == 'on') {
+        $systemUrl = str_replace('http://', 'https://', $systemUrl);
+    }
+    return '<form method=POST action="' . $systemUrl . '/paymentwallwidget.php" style="display:inline;">
         <input type="hidden" name="data" value="' . encrypt($widget->getHtmlCode(array(
         'width' => '100%',
         'height' => '500'
     ))) . '" />
-            <input type="image" src="' . $params['systemurl'] . '/images/paymentwall/' . $type . '.png" onClick="this.form.submit()"/>
+            <input type="image" src="' . $systemUrl . '/images/paymentwall/' . $type . '.png" onClick="this.form.submit()"/>
     </form>';
 }
