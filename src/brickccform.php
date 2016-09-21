@@ -35,7 +35,8 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
     if ($_POST['frominvoice'] == 'true' || $_POST['fromCCForm'] == 'true') {
 
         $invoice = get_invoice($CONFIG);
-        $invoice->setID($_POST['invoiceid']);
+        $invoiceId = $_POST['invoiceid'];
+        $invoice->setID($invoiceId);
         $invoiceData = $invoice->getOutput();
 
         $smartyvalues = array_merge($smartyvalues, get_smarty_values($invoice, $invoiceData, $gateways, $publicKey, $whmcsVer));
@@ -48,7 +49,8 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
                 'currency' => $post['currency'],
                 'token' => $_POST['brick_token'],
                 'fingerprint' => $_POST['brick_fingerprint'],
-                'description' => $invoiceData['pagetitle']
+                'description' => $invoiceData['pagetitle'],
+                'plan' => $invoiceId
             );
 
             $charge = create_charge($CONFIG, $invoiceData, $cardInfo);
@@ -57,7 +59,7 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
 
             if ($charge->isSuccessful() && empty($responseData['secure'])) {
                 if ($charge->isCaptured()) {
-                    addInvoicePayment($_POST['invoiceid'], $charge->getId(), null, null, 'brick');
+                    addInvoicePayment($invoiceId, $charge->getId(), null, null, 'brick');
                 } elseif ($charge->isUnderReview()) {
                     // decide on risk charge
                 }
