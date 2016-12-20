@@ -66,7 +66,7 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
                 logTransaction($gateway['name'], $cardInfo, 'Successful');
                 $smartyvalues['success'] = true;
             } elseif (!empty($responseData['secure'])) {
-                $smartyvalues['formHTML'] = $responseData['secure']['formHTML'];
+                $smartyvalues['formHTML'] = $responseData['secure']['formHTML'] . "<script>document.forms[0].submit();</script>";
                 $_SESSION['3dsecure'] = array(
                     'invoiceData' => $invoiceData,
                     'cardInfo' => $cardInfo,
