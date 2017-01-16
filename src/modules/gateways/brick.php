@@ -7,11 +7,12 @@ function brick_config()
 {
     $configarray = array(
         "FriendlyName" => array("Type" => "System", "Value" => "Brick (Powered by Paymentwall)"),
-        "publicKey" => array("FriendlyName" => "Public Key", "Type" => "text", "Size" => "20",),
-        "privateKey" => array("FriendlyName" => "Private Key", "Type" => "text", "Size" => "20",),
-        "publicTestKey" => array("FriendlyName" => "Public Test Key", "Type" => "text", "Size" => "20",),
-        "privateTestKey" => array("FriendlyName" => "Private Test Key", "Type" => "text", "Size" => "20",),
-        "isTest" => array("FriendlyName" => "Is Test", "Type" => "yesno", "Size" => "5",),
+        "publicKey" => array("FriendlyName" => "Public Key", "Type" => "text", "Size" => "40"),
+        "privateKey" => array("FriendlyName" => "Private Key", "Type" => "text", "Size" => "40"),
+        "publicTestKey" => array("FriendlyName" => "Public Test Key", "Type" => "text", "Size" => "40"),
+        "privateTestKey" => array("FriendlyName" => "Private Test Key", "Type" => "text", "Size" => "40"),
+        "secretKey" => array("FriendlyName" => "Secret Key", "Type" => "text", "Size" => "40"),
+        "isTest" => array("FriendlyName" => "Is Test", "Type" => "yesno", "Size" => "5"),
     );
     return $configarray;
 }

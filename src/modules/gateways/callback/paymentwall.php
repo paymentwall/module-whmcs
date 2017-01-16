@@ -16,30 +16,35 @@ define('PW_WHMCS_ITEM_TYPE_HOSTING', 'Hosting');
 
 require_once(ROOTDIR . "/includes/api/paymentwall_api/lib/paymentwall.php");
 
-$gateway = getGatewayVariables("paymentwall");
-
-if (!$gateway["type"]) {
-    die("Module Not Activated");
+$invoiceid = $_GET['goodsid'];
+if(!$invoiceid) {
+    die('Order is invalid!');
 }
 
+$orderData = mysql_fetch_assoc(select_query('tblorders', 'userid,id,paymentmethod', array("invoiceid" => $invoiceid)));
+
+$gateway = getGatewayVariables($orderData['paymentmethod']);
+
+if (!$gateway["type"]) {
+    die($gateway['name'] . " is not activated");
+}
+
+$pingback = new Paymentwall_Pingback($_GET, getRealClientIP());
 Paymentwall_Config::getInstance()->set(array(
     'api_type' => Paymentwall_Config::API_GOODS,
-    'public_key' => $gateway['appKey'], // available in your Paymentwall merchant area
     'private_key' => $gateway['secretKey'] // available in your Paymentwall merchant area
 ));
 
-$pingback = new Paymentwall_Pingback($_GET, $_SERVER['REMOTE_ADDR']);
-$invoiceid = checkCbInvoiceID($pingback->getProductId(), $gateway["name"]);
+$invoiceid = checkCbInvoiceID($pingback->getProductId(), $gateway["paymentmethod"]);
 
 if ($invoiceid && $pingback->validate()) {
 
-    $orderData = mysql_fetch_assoc(select_query('tblorders', 'userid,id', array("invoiceid" => $invoiceid)));
     $userData = mysql_fetch_assoc(select_query('tblclients', 'email, firstname, lastname, country, address1, state, phonenumber, postcode, city, id', array("id" => $orderData['userid'])));
 
     if ($pingback->isDeliverable()) {
         processDeliverable($invoiceid, $pingback, $gateway, $userData, $orderData);
     } elseif ($pingback->isCancelable()) {
-        processCancelable($orderData);
+        processCancelable($orderData, $gateway);
     } else {
         switch ($pingback->getType()) {
             /*
@@ -69,7 +74,7 @@ if ($invoiceid && $pingback->validate()) {
  * @param $orderData
  */
 function processDeliverable($invoiceid, $pingback, $gateway, $userData, $orderData) {
-    addInvoicePayment($invoiceid, $pingback->getReferenceId(), null, null, 'paymentwall');
+    addInvoicePayment($invoiceid, $pingback->getReferenceId(), null, null, $gateway['paymentmethod']);
 
     $invoiceItems = select_query(
         'tblinvoiceitems',
@@ -105,16 +110,16 @@ function processDeliverable($invoiceid, $pingback, $gateway, $userData, $orderDa
 /**
  * @param $orderData
  */
-function processCancelable($orderData) {
+function processCancelable($orderData, $gateway) {
     if (empty($orderData)) {
         logTransaction($gateway["name"], $_GET, "Unsuccessful");
         die("Order ID not found or Status not Pending !");
     }
 
     $orderId = $orderData['id'];
-    $result = select_query("tblorders", "", array("id" => $orderId, "status" => "Pending"));
+    $result = select_query("tblorders", "id", array("id" => $orderId, "status" => "Pending"));
 
-    if (mysql_num_rows($result) > 0) {
+    if (!empty($result)) {
         updateOrderStatus($orderId, "Cancelled");
         logTransaction($gateway["name"], $_GET, "Successful");
     } else {
@@ -125,12 +130,12 @@ function processCancelable($orderData) {
 
 /**
  * @param $orderId
- * @param $status 
+ * @param $status
  */
 function updateOrderStatus($orderId = null, $status) {
     if (empty($orderId)) {
         die("Order not found !");
-    } 
+    }
     update_query('tblorders', array(
         'status' => $status
     ), array('id' => $orderId));
@@ -210,6 +215,31 @@ function getHostId($invoiceItems) {
             return $item['relid'];
         }
     }
+}
+
+function getRealClientIP()
+{
+    if (function_exists('getallheaders')) {
+        $headers = getallheaders();
+    } else {
+        $headers = $_SERVER;
+    }
+
+    //Get the forwarded IP if it exists
+    if (array_key_exists('X-Forwarded-For', $headers)
+        && filter_var($headers['X-Forwarded-For'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)
+    ) {
+        $the_ip = $headers['X-Forwarded-For'];
+    } elseif (array_key_exists('HTTP_X_FORWARDED_FOR', $headers)
+        && filter_var($headers['HTTP_X_FORWARDED_FOR'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)
+    ) {
+        $the_ip = $headers['HTTP_X_FORWARDED_FOR'];
+    } elseif(array_key_exists('Cf-Connecting-Ip', $headers)) {
+        $the_ip = $headers['Cf-Connecting-Ip'];
+    } else {
+        $the_ip = filter_var($_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4);
+    }
+    return $the_ip;
 }
 
 die;
