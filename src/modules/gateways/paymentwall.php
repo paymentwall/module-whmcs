@@ -136,7 +136,7 @@ function get_subscription_product($params, $recurring, &$hasTrial)
     if (isset($recurring['firstpaymentamount'])) {
         // Product + Setup Fee
         $trialProduct = new Paymentwall_Product(
-            $params['invoiceid'],
+            $recurring['primaryserviceid'], // Pass hosting id instead of invoice
             $recurring['firstpaymentamount'],
             $params['currency'],
             $params["description"] . ' + Setup Fee',
@@ -149,7 +149,7 @@ function get_subscription_product($params, $recurring, &$hasTrial)
     }
 
     return new Paymentwall_Product(
-        $params['invoiceid'],
+        $recurring['primaryserviceid'],
         $recurring['recurringamount'],
         $params['currency'],
         $params["description"],
