@@ -1,11 +1,11 @@
-#About WHMCS module
+# About WHMCS module
 Paymentwall module for WHMCS.
 
 ### Requirement
 * Tested on WHMCS v5.3.14, v6.0.1 , v7.1.1
 * PHP 5.6 or greater
 
-#Installation
+# Installation
 To install Paymentwall WHMCS module, please follow the [instructions](https://www.paymentwall.com/us/documentation/WHMCS/826).
 
 After cloning the repository don't forget to install Paymentwall PHP API library (**required**):
