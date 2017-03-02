@@ -4,7 +4,7 @@ if (!file_exists("../../../init.php")) {
     // For v5.x
     include("../../../dbconnect.php");
 } else {
-    // For v6.x
+    // For v6.x, v7.x
     include("../../../init.php");
 }
 
@@ -13,7 +13,7 @@ include(ROOTDIR . "/includes/gatewayfunctions.php");
 include(ROOTDIR . "/includes/invoicefunctions.php");
 
 require_once(ROOTDIR . "/includes/api/paymentwall_api/lib/paymentwall.php");
-//error_reporting(E_ALL); ini_set('display_errors', 1);
+
 define('PW_WHMCS_ITEM_TYPE_HOSTING', 'Hosting');
 define('PW_WHMCS_ITEM_TYPE_CREDIT', 'AddFunds');
 
@@ -26,7 +26,8 @@ if (!$relId) {
 
 $invoiceId = getInvoiceIdPingback($_GET);
 $orderData = mysql_fetch_assoc(select_query('tblorders', 'userid,id,paymentmethod', ["invoiceid" => $invoiceId]));
-$gateway = getGatewayVariables($orderData['paymentmethod']);
+$invoiceData = mysql_fetch_assoc(select_query('tblinvoices', 'userid,total,paymentmethod', ["id" => $invoiceId]));
+$gateway = getGatewayVariables($invoiceData['paymentmethod']);
 
 if (!$gateway["type"]) {
     die($gateway['name'] . " is not activated");
@@ -306,10 +307,11 @@ function getInvoiceItems($invoiceId)
 
 function getInvoiceIdPingback($requestData)
 {
+    // If Recurring payment - it's Service id
+    // If Onetime payment - it's real Invoice id
     $relId = $requestData['goodsid'];
     $refId = $requestData['ref'];
 
-    // Onetime payment
     if ((int)$requestData['slength'] <= 0) {
         return $relId;
     }
