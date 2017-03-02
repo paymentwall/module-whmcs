@@ -13,14 +13,14 @@ include(ROOTDIR . "/includes/gatewayfunctions.php");
 include(ROOTDIR . "/includes/invoicefunctions.php");
 
 require_once(ROOTDIR . "/includes/api/paymentwall_api/lib/paymentwall.php");
-
+//error_reporting(E_ALL); ini_set('display_errors', 1);
 define('PW_WHMCS_ITEM_TYPE_HOSTING', 'Hosting');
 define('PW_WHMCS_ITEM_TYPE_CREDIT', 'AddFunds');
 
 $relId = $_GET['goodsid'];
 $refId = $_GET['ref'];
 
-if(!$relId) {
+if (!$relId) {
     die('RelId is invalid!');
 }
 
@@ -32,16 +32,15 @@ if (!$gateway["type"]) {
     die($gateway['name'] . " is not activated");
 }
 
-$pingback = new Paymentwall_Pingback($_GET, getRealClientIP());
 Paymentwall_Config::getInstance()->set([
     'api_type' => Paymentwall_Config::API_GOODS,
     'private_key' => $gateway['secretKey'] // available in your Paymentwall merchant area
 ]);
 
+$pingback = new Paymentwall_Pingback($_GET, getRealClientIP());
+
 checkCbInvoiceID($invoiceId, $gateway["paymentmethod"]);
-
 if ($pingback->validate()) {
-
     if ($invoiceId) {
         $userData = mysql_fetch_assoc(select_query('tblclients', 'email, firstname, lastname, country, address1, state, phonenumber, postcode, city, id', ["id" => $orderData['userid']]));
         if ($pingback->isDeliverable()) {
@@ -57,10 +56,10 @@ if ($pingback->validate()) {
                     break;
                 */
                 case Paymentwall_Pingback::PINGBACK_TYPE_SUBSCRIPTION_CANCELLATION:
-                // Cancel Recurring billing
-                updateSubscriptionId('', ['subscriptionid' => $pingback->getReferenceId()]);
-                processCancelable($orderData, $gateway);
-                break;
+                    // Cancel Recurring billing
+                    updateSubscriptionId('', ['subscriptionid' => $pingback->getReferenceId()]);
+                    processCancelable($orderData, $gateway);
+                    break;
             }
             logTransaction($gateway['name'], $_GET, "Successful");
         }
@@ -73,7 +72,7 @@ if ($pingback->validate()) {
             logTransaction($gateway['paymentmethod'], "Credit Payment Invoice #" . $relId, "Credit Added");
         }
     }
-    
+
     echo 'OK';
 } else {
     echo $pingback->getErrorSummary();
@@ -87,8 +86,8 @@ if ($pingback->validate()) {
  * @param $userData
  * @param $orderData
  */
-function processDeliverable($invoiceId, $pingback, $gateway, $userData, $orderData) {
-
+function processDeliverable($invoiceId, $pingback, $gateway, $userData, $orderData)
+{
     $invoice = mysql_fetch_assoc(select_query('tblinvoices', '*', ['id' => $invoiceId]));
     $invoiceItems = getInvoiceItems($invoiceId);
     $hosting = [];
@@ -122,28 +121,28 @@ function processDeliverable($invoiceId, $pingback, $gateway, $userData, $orderDa
         if ($hosting && $pingback->getProduct()->getType() == Paymentwall_Product::TYPE_SUBSCRIPTION) {
 
             $recurring = getRecurringBillingValues($invoiceId);
-            $amount = (float)$recurring['firstpaymentamount'] ?  $recurring['firstpaymentamount'] : $recurring['recurringamount'];
+            $amount = (float)$recurring['firstpaymentamount'] ? $recurring['firstpaymentamount'] : $recurring['recurringamount'];
 
             // Add credit
             insert_query("tblaccounts", [
-                "userid" => $hosting['userid'], 
-                "currency" => 0, 
-                "gateway" => $gateway['paymentmethod'], 
-                "date" => "now()", 
-                "description" => ucfirst($gateway['paymentmethod']) . " Credit Payment for Invoice #" . $invoiceId, 
-                "amountin" => $amount, 
-                "fees" => 0, 
-                "rate" => 1, 
+                "userid" => $hosting['userid'],
+                "currency" => 0,
+                "gateway" => $gateway['paymentmethod'],
+                "date" => "now()",
+                "description" => ucfirst($gateway['paymentmethod']) . " Credit Payment for Invoice #" . $invoiceId,
+                "amountin" => $amount,
+                "fees" => 0,
+                "rate" => 1,
                 "transid" => $pingback->getReferenceId()
-                ]);
+            ]);
 
             insert_query("tblcredit", [
-                "clientid" => $hosting['userid'], 
-                "date" => "now()", 
-                "description" => "Subscription Transaction ID " . $pingback->getReferenceId(), 
+                "clientid" => $hosting['userid'],
+                "date" => "now()",
+                "description" => "Subscription Transaction ID " . $pingback->getReferenceId(),
                 "amount" => $amount
-                ]);
-            
+            ]);
+
             update_query("tblclients", ["credit" => "+=" . $amount], ["id" => $hosting['userid']]);
             logTransaction($gateway['paymentmethod'], "Credit Subscription ID " . $pingback->getReferenceId() . " with Amount is " . $amount, "Credit Added");
         }
@@ -154,8 +153,8 @@ function processDeliverable($invoiceId, $pingback, $gateway, $userData, $orderDa
 /**
  * @param $orderData
  */
-function processCancelable($orderData, $gateway) {
-
+function processCancelable($orderData, $gateway)
+{
     $orderId = $orderData['id'];
     $result = select_query("tblorders", "id", ["id" => $orderId]);
 
@@ -172,7 +171,8 @@ function processCancelable($orderData, $gateway) {
  * @param $orderId
  * @param $status
  */
-function updateOrderStatus($orderId = null, $status) {
+function updateOrderStatus($orderId = null, $status)
+{
     if (empty($orderId)) {
         die("Order not found !");
     }
@@ -183,7 +183,8 @@ function updateOrderStatus($orderId = null, $status) {
  * @param $subscriptionId
  * @param $conditions
  */
-function updateSubscriptionId($subscriptionId, $conditions) {
+function updateSubscriptionId($subscriptionId, $conditions)
+{
     update_query('tblhosting', ['subscriptionid' => $subscriptionId], $conditions);
 }
 
@@ -192,9 +193,10 @@ function updateSubscriptionId($subscriptionId, $conditions) {
  * @param $hosting
  * @param $userData
  * @param $orderData
- * @param $pingback
+ * @param Paymentwall_Pingback $pingback
  */
-function sendDeliveryApiRequest($invoiceId, $hosting, $userData, $orderData, $pingback) {
+function sendDeliveryApiRequest($invoiceId, $hosting, $userData, $orderData, $pingback)
+{
     // Get Delivery data from DB
     $deliveryData = mysql_fetch_assoc(select_query('pw_delivery_data', '*', [
         "package_id" => $hosting['packageid'],
@@ -202,7 +204,7 @@ function sendDeliveryApiRequest($invoiceId, $hosting, $userData, $orderData, $pi
         "username" => $hosting['username'],
         "order_id" => $orderData['id'],
         "status" => "unsent",
-        ]));
+    ]));
 
     if ($deliveryData) {
         $data = array_merge(
@@ -214,7 +216,7 @@ function sendDeliveryApiRequest($invoiceId, $hosting, $userData, $orderData, $pi
                 'details' => 'Item will be delivered via email by ' . date('Y/m/d H:i:s')
             ],
             json_decode($deliveryData['data'], true)
-            );
+        );
 
         $delivery = new Paymentwall_GenerericApiObject('delivery');
         $response = $delivery->post($data);
@@ -231,14 +233,15 @@ function sendDeliveryApiRequest($invoiceId, $hosting, $userData, $orderData, $pi
  * @param $invoiceId
  * @param $refId
  */
-function updateDeliveryStatus($deliveryId, $status, $data, $invoiceId, $refId) {
+function updateDeliveryStatus($deliveryId, $status, $data, $invoiceId, $refId)
+{
     update_query('pw_delivery_data', [
-            'status' => $status,
-            'reference_id' => $refId,
-            'invoice_id' => $invoiceId,
-            'data' => json_encode($data),
-            'updated_date' => time(),
-        ], 
+        'status' => $status,
+        'reference_id' => $refId,
+        'invoice_id' => $invoiceId,
+        'data' => json_encode($data),
+        'updated_date' => time(),
+    ],
         ['id' => $deliveryId]
     );
 }
@@ -247,15 +250,18 @@ function updateDeliveryStatus($deliveryId, $status, $data, $invoiceId, $refId) {
  * @param $invoiceItems
  * @return mixed
  */
-function getHostId($invoiceItems) {
+function getHostId($invoiceItems)
+{
     foreach ($invoiceItems as $item) {
         if ($item['relid'] != 0 && $item['type'] == PW_WHMCS_ITEM_TYPE_HOSTING) {
             return $item['relid'];
         }
     }
+    return null;
 }
 
-function getRealClientIP(){
+function getRealClientIP()
+{
 
     if (function_exists('getallheaders')) {
         $headers = getallheaders();
@@ -268,7 +274,7 @@ function getRealClientIP(){
         $the_ip = $headers['X-Forwarded-For'];
     } elseif (array_key_exists('HTTP_X_FORWARDED_FOR', $headers) && filter_var($headers['HTTP_X_FORWARDED_FOR'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
         $the_ip = $headers['HTTP_X_FORWARDED_FOR'];
-    } elseif(array_key_exists('Cf-Connecting-Ip', $headers)) {
+    } elseif (array_key_exists('Cf-Connecting-Ip', $headers)) {
         $the_ip = $headers['Cf-Connecting-Ip'];
     } else {
         $the_ip = filter_var($_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP, FILTER_FLAG_IPV4);
@@ -277,7 +283,8 @@ function getRealClientIP(){
     return $the_ip;
 }
 
-function isCreditRequest($invoiceItems) {
+function isCreditRequest($invoiceItems)
+{
     foreach ($invoiceItems as $item) {
         if ($item['relid'] == 0 && $item['type'] == PW_WHMCS_ITEM_TYPE_CREDIT) {
             return true;
@@ -286,7 +293,8 @@ function isCreditRequest($invoiceItems) {
     return false;
 }
 
-function getInvoiceItems($invoiceId) {
+function getInvoiceItems($invoiceId)
+{
     $items = [];
     $invoiceItems = select_query('tblinvoiceitems', '*', ["invoiceid" => $invoiceId]);
 
@@ -296,8 +304,8 @@ function getInvoiceItems($invoiceId) {
     return $items;
 }
 
-function getInvoiceIdPingback($requestData) {
-
+function getInvoiceIdPingback($requestData)
+{
     $relId = $requestData['goodsid'];
     $refId = $requestData['ref'];
 
@@ -305,43 +313,53 @@ function getInvoiceIdPingback($requestData) {
     if ((int)$requestData['slength'] <= 0) {
         return $relId;
     }
-    
-    $query = "SELECT tblinvoices.id,tblinvoices.userid 
-    FROM tblinvoiceitems INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
-    WHERE tblinvoiceitems.relid='" . (int)$relId . "' AND tblinvoiceitems.type='Hosting' AND tblinvoices.status='Unpaid' ORDER BY tblinvoices.id ASC";
+
+    $query = "SELECT tblinvoices.id, tblinvoices.userid 
+    FROM tblinvoiceitems 
+    INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
+    WHERE tblinvoiceitems.relid='" . (int)$relId . "' 
+        AND tblinvoiceitems.type='Hosting' AND tblinvoices.status='Unpaid' 
+    ORDER BY tblinvoices.id ASC";
 
     $result = full_query($query);
-    $data = mysql_fetch_array($result);
+    $data = mysql_fetch_assoc($result);
     $invoiceid = $data['id'];
     $userid = $data['userid'];
     $logMsg = '';
-        
+
     if ($invoiceid) {
         $logMsg .= ("Invoice Found from Product ID Match => " . $invoiceid . "\r\n");
     } else {
         $query = "SELECT tblinvoiceitems.invoiceid,tblinvoices.userid 
-        FROM tblhosting INNER JOIN tblinvoiceitems ON tblhosting.id=tblinvoiceitems.relid 
+        FROM tblhosting 
+        INNER JOIN tblinvoiceitems ON tblhosting.id=tblinvoiceitems.relid 
         INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
-        WHERE tblinvoices.status='Unpaid' AND tblhosting.subscriptionid='" . db_escape_string($refId) . "' AND tblinvoiceitems.type='Hosting' ORDER BY tblinvoiceitems.invoiceid ASC";
+        WHERE tblinvoices.status='Unpaid' 
+            AND tblhosting.subscriptionid='" . db_escape_string($refId) . "' AND tblinvoiceitems.type='Hosting' 
+        ORDER BY tblinvoiceitems.invoiceid ASC";
         $result = full_query($query);
-        $data = mysql_fetch_array($result);
+        $data = mysql_fetch_assoc($result);
         $invoiceid = $data['invoiceid'];
         $userid = $data['userid'];
-            
+
         if ($invoiceid) {
-            $logMsg.= ("Invoice Found from Subscription ID Match => " . $invoiceid . "\r\n");
+            $logMsg .= ("Invoice Found from Subscription ID Match => " . $invoiceid . "\r\n");
         }
     }
-        
+
     if (!$invoiceid) {
-        $query = "SELECT tblinvoices.id,tblinvoices.userid FROM tblinvoiceitems INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid WHERE tblinvoiceitems.relid='" . (int)$relId . "' AND tblinvoiceitems.type='Hosting' AND tblinvoices.status='Paid' ORDER BY tblinvoices.id DESC";
+        $query = "SELECT tblinvoices.id,tblinvoices.userid 
+        FROM tblinvoiceitems 
+        INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
+        WHERE tblinvoiceitems.relid='" . (int)$relId . "' AND tblinvoiceitems.type='Hosting' AND tblinvoices.status='Paid' 
+        ORDER BY tblinvoices.id DESC";
         $result = full_query($query);
-        $data = mysql_fetch_array($result);
+        $data = mysql_fetch_assoc($result);
         $invoiceid = $data['id'];
         $userid = $data['userid'];
-            
+
         if ($invoiceid) {
-            $logMsg.= ("Paid Invoice Found from Service ID Match => " . $invoiceid . "\r\n");
+            $logMsg .= ("Paid Invoice Found from Service ID Match => " . $invoiceid . "\r\n");
         }
     }
 
