@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 # Required File Includes
 if (!file_exists("../../../init.php")) {
     // For v5.x
@@ -25,6 +25,9 @@ if (!$relId) {
 }
 
 $invoiceId = getInvoiceIdPingback($_GET);
+if(!$invoiceId) {
+    die("Invoice is not found");
+}
 $orderData = mysql_fetch_assoc(select_query('tblorders', 'userid,id,paymentmethod', ["invoiceid" => $invoiceId]));
 $invoiceData = mysql_fetch_assoc(select_query('tblinvoices', 'userid,total,paymentmethod', ["id" => $invoiceId]));
 $gateway = getGatewayVariables($invoiceData['paymentmethod']);
@@ -33,15 +36,22 @@ if (!$gateway["type"]) {
     die($gateway['name'] . " is not activated");
 }
 
-Paymentwall_Config::getInstance()->set([
-    'api_type' => Paymentwall_Config::API_GOODS,
-    'private_key' => $gateway['secretKey'] // available in your Paymentwall merchant area
-]);
+if ($gateway['paymentmethod']=='brick') {
+    Paymentwall_Config::getInstance()->set([
+        'api_type' => Paymentwall_Config::API_GOODS,
+        'private_key' =>  $gateway['isTest'] ? $gateway['privateTestKey'] : $gateway['privateKey'] 
+    ]);
+} else {
+    Paymentwall_Config::getInstance()->set([
+        'api_type' => Paymentwall_Config::API_GOODS,
+        'private_key' => $gateway['secretKey'] // available in your Paymentwall merchant area
+    ]);
+}
 
 $pingback = new Paymentwall_Pingback($_GET, getRealClientIP());
-
+//echo $invoiceId;
 checkCbInvoiceID($invoiceId, $gateway["paymentmethod"]);
-if ($pingback->validate()) {
+if ($pingback->validate(true)) {
     if ($invoiceId) {
         $userData = mysql_fetch_assoc(select_query('tblclients', 'email, firstname, lastname, country, address1, state, phonenumber, postcode, city, id', ["id" => $orderData['userid']]));
         if ($pingback->isDeliverable()) {
@@ -322,7 +332,7 @@ function getInvoiceIdPingback($requestData)
     WHERE tblinvoiceitems.relid='" . (int)$relId . "' 
         AND tblinvoiceitems.type='Hosting' AND tblinvoices.status='Unpaid' 
     ORDER BY tblinvoices.id ASC";
-
+// echo $query.'<br/>';
     $result = full_query($query);
     $data = mysql_fetch_assoc($result);
     $invoiceid = $data['id'];
@@ -339,6 +349,7 @@ function getInvoiceIdPingback($requestData)
         WHERE tblinvoices.status='Unpaid' 
             AND tblhosting.subscriptionid='" . db_escape_string($refId) . "' AND tblinvoiceitems.type='Hosting' 
         ORDER BY tblinvoiceitems.invoiceid ASC";
+        // echo $query.'<br/>';
         $result = full_query($query);
         $data = mysql_fetch_assoc($result);
         $invoiceid = $data['invoiceid'];
@@ -355,6 +366,7 @@ function getInvoiceIdPingback($requestData)
         INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
         WHERE tblinvoiceitems.relid='" . (int)$relId . "' AND tblinvoiceitems.type='Hosting' AND tblinvoices.status='Paid' 
         ORDER BY tblinvoices.id DESC";
+        // echo $query.'<br/>';
         $result = full_query($query);
         $data = mysql_fetch_assoc($result);
         $invoiceid = $data['id'];
@@ -364,6 +376,8 @@ function getInvoiceIdPingback($requestData)
             $logMsg .= ("Paid Invoice Found from Service ID Match => " . $invoiceid . "\r\n");
         }
     }
+
+    $invoiceid = !isset($invoiceid) ? $relId : $invoiceid;
 
     return $invoiceid;
 }
