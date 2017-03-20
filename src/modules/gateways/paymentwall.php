@@ -24,6 +24,7 @@ function paymentwall_config()
 function init_paymentwall_config($params)
 {
     require_once(ROOTDIR . '/includes/api/paymentwall_api/lib/paymentwall.php');
+    require_once(ROOTDIR . '/modules/gateways/paymentwall/helpers/helper.php');
     Paymentwall_Config::getInstance()->set(array(
         'api_type' => Paymentwall_Config::API_GOODS,
         'public_key' => $params['appKey'], // available in your Paymentwall merchant area
@@ -159,16 +160,6 @@ function get_subscription_product($params, $recurring, &$hasTrial)
         true,
         $trialProduct
     );
-}
-
-/**
- * @param $recurringCycleUnits
- * @return string
- */
-function get_period_type($recurringCycleUnits)
-{
-    $cycleUnits = strtoupper(substr($recurringCycleUnits, 0, 1));
-    return ($cycleUnits == 'Y') ? Paymentwall_Product::PERIOD_TYPE_YEAR : Paymentwall_Product::PERIOD_TYPE_MONTH;
 }
 
 /**
