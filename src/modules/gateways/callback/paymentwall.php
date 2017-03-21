@@ -49,9 +49,9 @@ if ($gateway['paymentmethod']=='brick') {
 }
 
 $pingback = new Paymentwall_Pingback($_GET, getRealClientIP());
-//echo $invoiceId;
+
 checkCbInvoiceID($invoiceId, $gateway["paymentmethod"]);
-if ($pingback->validate(true)) {
+if ($pingback->validate()) {
     if ($invoiceId) {
         $userData = mysql_fetch_assoc(select_query('tblclients', 'email, firstname, lastname, country, address1, state, phonenumber, postcode, city, id', ["id" => $orderData['userid']]));
         if ($pingback->isDeliverable()) {
@@ -332,7 +332,6 @@ function getInvoiceIdPingback($requestData)
     WHERE tblinvoiceitems.relid='" . (int)$relId . "' 
         AND tblinvoiceitems.type='Hosting' AND tblinvoices.status='Unpaid' 
     ORDER BY tblinvoices.id ASC";
-// echo $query.'<br/>';
     $result = full_query($query);
     $data = mysql_fetch_assoc($result);
     $invoiceid = $data['id'];
@@ -349,7 +348,6 @@ function getInvoiceIdPingback($requestData)
         WHERE tblinvoices.status='Unpaid' 
             AND tblhosting.subscriptionid='" . db_escape_string($refId) . "' AND tblinvoiceitems.type='Hosting' 
         ORDER BY tblinvoiceitems.invoiceid ASC";
-        // echo $query.'<br/>';
         $result = full_query($query);
         $data = mysql_fetch_assoc($result);
         $invoiceid = $data['invoiceid'];
@@ -366,7 +364,6 @@ function getInvoiceIdPingback($requestData)
         INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
         WHERE tblinvoiceitems.relid='" . (int)$relId . "' AND tblinvoiceitems.type='Hosting' AND tblinvoices.status='Paid' 
         ORDER BY tblinvoices.id DESC";
-        // echo $query.'<br/>';
         $result = full_query($query);
         $data = mysql_fetch_assoc($result);
         $invoiceid = $data['id'];
