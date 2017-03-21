@@ -317,14 +317,8 @@ function getInvoiceItems($invoiceId)
 
 function getInvoiceIdPingback($requestData)
 {
-    // If Recurring payment - it's Service id
-    // If Onetime payment - it's real Invoice id
     $relId = $requestData['goodsid'];
     $refId = $requestData['ref'];
-
-    if ((int)$requestData['slength'] <= 0) {
-        return $relId;
-    }
 
     $query = "SELECT tblinvoices.id, tblinvoices.userid 
     FROM tblinvoiceitems 
