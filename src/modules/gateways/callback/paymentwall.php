@@ -13,9 +13,7 @@ include(ROOTDIR . "/includes/gatewayfunctions.php");
 include(ROOTDIR . "/includes/invoicefunctions.php");
 
 require_once(ROOTDIR . "/includes/api/paymentwall_api/lib/paymentwall.php");
-
-define('PW_WHMCS_ITEM_TYPE_HOSTING', 'Hosting');
-define('PW_WHMCS_ITEM_TYPE_CREDIT', 'AddFunds');
+require_once(ROOTDIR . '/modules/gateways/paymentwall/helpers/helper.php');
 
 $relId = $_GET['goodsid'];
 $refId = $_GET['ref'];
@@ -36,22 +34,24 @@ if (!$gateway["type"]) {
     die($gateway['name'] . " is not activated");
 }
 
-if ($gateway['paymentmethod']=='brick') {
-    Paymentwall_Config::getInstance()->set([
-        'api_type' => Paymentwall_Config::API_GOODS,
-        'private_key' =>  $gateway['isTest'] ? $gateway['privateTestKey'] : $gateway['privateKey'] 
-    ]);
-} else {
-    Paymentwall_Config::getInstance()->set([
-        'api_type' => Paymentwall_Config::API_GOODS,
-        'private_key' => $gateway['secretKey'] // available in your Paymentwall merchant area
-    ]);
-}
+Paymentwall_Config::getInstance()->set([
+    'api_type' => Paymentwall_Config::API_GOODS,
+    'private_key' => $gateway['secretKey'] // available in your Paymentwall merchant area
+]);
 
 $pingback = new Paymentwall_Pingback($_GET, getRealClientIP());
-
+//echo $invoiceId;
 checkCbInvoiceID($invoiceId, $gateway["paymentmethod"]);
-if ($pingback->validate()) {
+if (!$pingback->validate(true)) {
+    if ($gateway['paymentmethod'] == 'brick') {
+        Paymentwall_Config::getInstance()->set([
+            'api_type' => Paymentwall_Config::API_GOODS,
+            'private_key' => $gateway['privateTestKey'] // available in your Paymentwall merchant area
+        ]);
+        $pingback = new Paymentwall_Pingback($_GET, getRealClientIP());
+    }
+}
+if ($pingback->validate(true)) {
     if ($invoiceId) {
         $userData = mysql_fetch_assoc(select_query('tblclients', 'email, firstname, lastname, country, address1, state, phonenumber, postcode, city, id', ["id" => $orderData['userid']]));
         if ($pingback->isDeliverable()) {
@@ -74,14 +74,6 @@ if ($pingback->validate()) {
             }
             logTransaction($gateway['name'], $_GET, "Successful");
         }
-    } else {
-
-        // Process credit request
-        $invoiceItems = getInvoiceItems($relId);
-        if (isCreditRequest($invoiceItems)) {
-            addInvoicePayment($relId, $pingback->getReferenceId(), null, null, $gateway['paymentmethod']);
-            logTransaction($gateway['paymentmethod'], "Credit Payment Invoice #" . $relId, "Credit Added");
-        }
     }
 
     echo 'OK';
@@ -100,10 +92,9 @@ if ($pingback->validate()) {
 function processDeliverable($invoiceId, $pingback, $gateway, $userData, $orderData)
 {
     $invoice = mysql_fetch_assoc(select_query('tblinvoices', '*', ['id' => $invoiceId]));
-    $invoiceItems = getInvoiceItems($invoiceId);
     $hosting = [];
 
-    if ($hostId = getHostId($invoiceItems)) {
+    if ($hostId = getHostIdFromInvoice($invoiceId)) {
         $hosting = mysql_fetch_assoc(select_query(
             'tblhosting', // table name
             'tblhosting.id,tblhosting.username,tblhosting.packageid,tblhosting.userid', // fields name
@@ -257,20 +248,6 @@ function updateDeliveryStatus($deliveryId, $status, $data, $invoiceId, $refId)
     );
 }
 
-/**
- * @param $invoiceItems
- * @return mixed
- */
-function getHostId($invoiceItems)
-{
-    foreach ($invoiceItems as $item) {
-        if ($item['relid'] != 0 && $item['type'] == PW_WHMCS_ITEM_TYPE_HOSTING) {
-            return $item['relid'];
-        }
-    }
-    return null;
-}
-
 function getRealClientIP()
 {
 
@@ -294,29 +271,10 @@ function getRealClientIP()
     return $the_ip;
 }
 
-function isCreditRequest($invoiceItems)
-{
-    foreach ($invoiceItems as $item) {
-        if ($item['relid'] == 0 && $item['type'] == PW_WHMCS_ITEM_TYPE_CREDIT) {
-            return true;
-        }
-    }
-    return false;
-}
-
-function getInvoiceItems($invoiceId)
-{
-    $items = [];
-    $invoiceItems = select_query('tblinvoiceitems', '*', ["invoiceid" => $invoiceId]);
-
-    while ($item = mysql_fetch_assoc($invoiceItems)) {
-        $items[$item['id']] = $item;
-    }
-    return $items;
-}
-
 function getInvoiceIdPingback($requestData)
 {
+    // If Recurring payment - it's Service id
+    // If Onetime payment - it's real Invoice id
     $relId = $requestData['goodsid'];
     $refId = $requestData['ref'];
 
@@ -333,7 +291,7 @@ function getInvoiceIdPingback($requestData)
     $logMsg = '';
 
     if ($invoiceid) {
-        $logMsg .= ("Invoice Found from Product ID Match => " . $invoiceid . "\r\n");
+        $logMsg .= ("Invoice Found from Service ID Match => " . $invoiceid . "\r\n");
     } else {
         $query = "SELECT tblinvoiceitems.invoiceid,tblinvoices.userid 
         FROM tblhosting 
@@ -351,24 +309,6 @@ function getInvoiceIdPingback($requestData)
             $logMsg .= ("Invoice Found from Subscription ID Match => " . $invoiceid . "\r\n");
         }
     }
-
-    if (!$invoiceid) {
-        $query = "SELECT tblinvoices.id,tblinvoices.userid 
-        FROM tblinvoiceitems 
-        INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
-        WHERE tblinvoiceitems.relid='" . (int)$relId . "' AND tblinvoiceitems.type='Hosting' AND tblinvoices.status='Paid' 
-        ORDER BY tblinvoices.id DESC";
-        $result = full_query($query);
-        $data = mysql_fetch_assoc($result);
-        $invoiceid = $data['id'];
-        $userid = $data['userid'];
-
-        if ($invoiceid) {
-            $logMsg .= ("Paid Invoice Found from Service ID Match => " . $invoiceid . "\r\n");
-        }
-    }
-
-    $invoiceid = !isset($invoiceid) ? $relId : $invoiceid;
 
     return $invoiceid;
 }

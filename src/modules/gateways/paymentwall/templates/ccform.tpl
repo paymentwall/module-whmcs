@@ -153,10 +153,10 @@
 {/if}
 {if $success == true}
 	<div class="text-center">
-		<h1>Success</h1>
-		<p>Your credit card payment was successful.</p>
-		<p><a href="{$systemurl}viewinvoice.php?id={$invoiceid}&paymentsuccess=true" title="Invoice #{$invoiceid}">Click
-				here</a> to view your paid invoice.</p>
+		<h1>Thank you!</h1>
+		<p>Your transaction may be put under review and the invoice will be marked as Unpaid for a few minutes. Please contact us if the status of the invoice remains unchanged afterward.</p>
+		<p><a href="{$systemurl}viewinvoice.php?id={$invoiceid}" title="Invoice #{$invoiceid}">Click
+				here</a> to view your invoice.</p>
 	</div>
 {/if}
 <div class="text-center" style="margin:40px 0 0 0;">

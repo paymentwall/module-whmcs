@@ -5,6 +5,7 @@ define('FORCESSL', true);
 include('init.php');
 require_once(ROOTDIR . '/includes/api/paymentwall_api/lib/paymentwall.php');
 require_once(ROOTDIR . '/modules/gateways/paymentwall/helpers/helper.php');
+
 $whmcs->load_function('gateway');
 $whmcs->load_function('clientarea');
 $whmcs->load_function('invoice');
@@ -43,9 +44,9 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
         $smartyvalues = array_merge($smartyvalues, get_smarty_values($invoice, $invoiceData, $gateways, $publicKey, $whmcsVer));
 
         if ($_POST['fromCCForm'] == 'true') { # Check form submit & capture payment
-            $recurring = getRecurringBillingValues($invoiceId);
+            $recurring = getRecurringBillingValuesFromInvoice($invoiceId);
             $paid = 0;
-            if (isset($recurring)) {
+            if (isset($recurring) && $recurring) {
                 $post['brick_token'] = $_POST['brick_token'];
                 $post['brick_fingerprint'] = $_POST['brick_fingerprint'];
                 $subscription = create_subscription($CONFIG,$invoiceData,$recurring,$post);
@@ -62,7 +63,7 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
                     'token' => $_POST['brick_token'],
                     'fingerprint' => $_POST['brick_fingerprint'],
                     'description' => $invoiceData['pagetitle'],
-                    'plan' => $invoiceId
+                    'plan' => getHostIdFromInvoice($invoiceId)
                 );
                 $charge = create_charge($CONFIG, $invoiceData, $cardInfo);
                 $response = $charge->getPublicData();
@@ -94,23 +95,22 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
                     'invoiceData' => $invoiceData,
                     'postData' => $_POST['data']
                 );
-                if (isset($recurring)) {
+                if (isset($recurring) && $recurring) {
                     $_SESSION['3dsecure']['recurring'] = $recurring;
                     $_SESSION['3dsecure']['post'] = $post;
                 } else
                     $_SESSION['3dsecure']['cardInfo'] = $cardInfo;
-                logTransaction($gateway['name'], isset($recurring) ? $recurring : $cardInfo, 'Confirm 3ds');
+                logTransaction($gateway['name'], isset($recurring) && $recurring ? $recurring : $cardInfo, 'Confirm 3ds');
             } else {
                 $error = json_decode($response, true);
                 $smartyvalues['processingerror'] = '<li>' . $error['error']['message'] . '</li>';
-                logTransaction($gateway['name'], isset($recurring) ? $recurring : $cardInfo, 'Unsuccessful');
+                logTransaction($gateway['name'], isset($recurring) && $recurring ? $recurring : $cardInfo, 'Unsuccessful');
             }
         }
     } else { // User is logged in but they shouldn't be here (i.e. they weren't here from an invoice)
         header("Location: " . $CONFIG['SystemURL'] . "/clientarea.php?action=details");
     }
 } elseif (isset($_POST['brick_secure_token']) && isset($_POST['brick_charge_id'])) {
-
     $secureData = $_SESSION['3dsecure'];
     $smartyvalues['data'] = $secureData['postData'];
 
@@ -155,7 +155,7 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
         $smartyvalues['success'] = true;
     } else {
         $error = json_decode($response, true);
-        $smartyvalues['processingerror'] = '<li>You have canceled confirm 3ds.</li>';
+        $smartyvalues['processingerror'] = '<li>'.$error['error']['message'].'</li>';
         logTransaction($gateway['name'], isset($subscription) ? $secureData['recurring'] : $cardInfo, 'Unsuccessful');
     }
 } else {
@@ -247,20 +247,18 @@ function prepare_subscription_data($post,$invoiceData,$recurring) {
         throw new Exception("Payment Invalid!");
     }
     $trial_data = isset($recurring['firstpaymentamount']) ? prepare_trial_data($post, $recurring) : array();
+
     return array_merge(
         array(
             'token' => $post['brick_token'],
-            'amount' => $post['amount'],
+            'amount' => $recurring['recurringamount'],
             'currency' => $post['currency'],
             'email' => $invoiceData['clientsdetails']['email'],
             'fingerprint' => $post['brick_fingerprint'],
             'description' => $post['description'],
-//            'plan' => $invoiceData['id'],
             'plan' => $recurring['primaryserviceid'],
-            'period' => 'day',
-            'period_duration' => 1,
-            //'period' => get_period_type($recurring['recurringcycleunits']),
-            //'period_duration' => $recurring['recurringcycleperiod'],
+            'period' => get_period_type($recurring['recurringcycleunits']),
+            'period_duration' => $recurring['recurringcycleperiod'],
             'secure_token' => !empty($_POST['brick_secure_token']) ? $_POST['brick_secure_token'] : null,
             'charge_id' => !empty($_POST['brick_charge_id']) ? $_POST['brick_charge_id'] : null,
         ),
@@ -272,7 +270,7 @@ function prepare_trial_data($post, $recurring) {
     return array(
         'trial[amount]' => $recurring['firstpaymentamount'],
         'trial[currency]' => $post['currency'],
-        'trial[period]' => get_period_type($recurring['recurringcycleunits']),
-        'trial[period_duration]' => $recurring['recurringcycleperiod'],
+        'trial[period]' => get_period_type($recurring['firstcycleunits']),
+        'trial[period_duration]' => $recurring['firstcycleperiod'],
     );
 }
