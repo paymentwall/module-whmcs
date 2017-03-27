@@ -36,7 +36,7 @@ if (!$gateway["type"]) {
 
 Paymentwall_Config::getInstance()->set([
     'api_type' => Paymentwall_Config::API_GOODS,
-    'private_key' => $gateway['isTest'] ? $gateway['publicTestKey'] : $gateway['secretKey'] // available in your Paymentwall merchant area
+    'private_key' => $gateway['isTest'] ? $gateway['privateTestKey'] : $gateway['secretKey'] // available in your Paymentwall merchant area
 ]);
 
 $pingback = new Paymentwall_Pingback($_GET, getRealClientIP());
