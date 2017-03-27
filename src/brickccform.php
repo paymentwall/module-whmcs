@@ -46,7 +46,7 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
         if ($_POST['fromCCForm'] == 'true') { # Check form submit & capture payment
             $recurring = getRecurringBillingValuesFromInvoice($invoiceId);
             $paid = 0;
-            if (isset($recurring) && $recurring) {
+            if (!empty($recurring)) {
                 $post['brick_token'] = $_POST['brick_token'];
                 $post['brick_fingerprint'] = $_POST['brick_fingerprint'];
                 $subscription = create_subscription($CONFIG,$invoiceData,$recurring,$post);
@@ -95,16 +95,16 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
                     'invoiceData' => $invoiceData,
                     'postData' => $_POST['data']
                 );
-                if (isset($recurring) && $recurring) {
+                if (!empty($recurring)) {
                     $_SESSION['3dsecure']['recurring'] = $recurring;
                     $_SESSION['3dsecure']['post'] = $post;
                 } else
                     $_SESSION['3dsecure']['cardInfo'] = $cardInfo;
-                logTransaction($gateway['name'], isset($recurring) && $recurring ? $recurring : $cardInfo, 'Confirm 3ds');
+                logTransaction($gateway['name'], !empty($recurring) ? $recurring : $cardInfo, 'Confirm 3ds');
             } else {
                 $error = json_decode($response, true);
                 $smartyvalues['processingerror'] = '<li>' . $error['error']['message'] . '</li>';
-                logTransaction($gateway['name'], isset($recurring) && $recurring ? $recurring : $cardInfo, 'Unsuccessful');
+                logTransaction($gateway['name'], !empty($recurring) ? $recurring : $cardInfo, 'Unsuccessful');
             }
         }
     } else { // User is logged in but they shouldn't be here (i.e. they weren't here from an invoice)
