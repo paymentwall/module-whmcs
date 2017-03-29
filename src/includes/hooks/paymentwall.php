@@ -59,4 +59,30 @@ function afterSetupProductEventListener($vars)
     }
 }
 
+
+function cancelSubscription($vars)
+{
+    $invoiceId = $vars['invoiceid'];
+    if(isset($invoiceId)) {
+        require_once(ROOTDIR . '/modules/gateways/brick.php');
+        $invoiceData = mysql_fetch_assoc(select_query('tblinvoices', 'userid,total,paymentmethod', ["id" => $invoiceId]));
+        $gateway = getGatewayVariables($invoiceData['paymentmethod']);
+
+        if (!$gateway["type"]) {
+            die($gateway['name'] . " is not activated");
+        }
+        init_brick_config($gateway);
+
+        $result = select_query("tblaccounts", "transid", array("invoiceid" => $invoiceId));
+        $data = mysql_fetch_assoc($result);
+        if($data['transid']) {
+            $subscription_api = new Paymentwall_Subscription($data['transid']);
+            $result = $subscription_api->cancel();
+        }
+    }
+}
+
+
 add_hook("AfterModuleCreate", 1, "afterSetupProductEventListener");
+
+add_hook("InvoiceCancelled", 1, "cancelSubscription");

@@ -24,6 +24,7 @@ function paymentwall_config()
 function init_paymentwall_config($params)
 {
     require_once(ROOTDIR . '/includes/api/paymentwall_api/lib/paymentwall.php');
+    require_once(ROOTDIR . '/modules/gateways/paymentwall/helpers/helper.php');
     Paymentwall_Config::getInstance()->set(array(
         'api_type' => Paymentwall_Config::API_GOODS,
         'public_key' => $params['appKey'], // available in your Paymentwall merchant area
@@ -35,7 +36,7 @@ function paymentwall_link($params)
 {
     init_paymentwall_config($params);
     $product = null;
-    $recurring = getRecurringBillingValues($params['invoiceid']);
+    $recurring = getRecurringBillingValuesFromInvoice($params['invoiceid']);
 
     $code = '';
     $hasTrial = false;
@@ -59,6 +60,7 @@ function paymentwall_link($params)
                     'integration_module' => 'whmcs',
                     'test_mode' => $params['isTest'] == 'on' ? 1 : 0,
                     'hide_post_trial_good' => $hasTrial ? 1 : 0,
+                    'success_url' => $params['systemurl'].'/cart.php?a=complete'
                 ),
                 get_user_profile_data($params)
             )
@@ -77,6 +79,7 @@ function paymentwall_link($params)
                 array(
                     'integration_module' => 'whmcs',
                     'test_mode' => $params['isTest'] == 'on' ? 1 : 0,
+                    'success_url' => $params['systemurl'].'/cart.php?a=complete'
                 ),
                 get_user_profile_data($params)
             )
@@ -114,8 +117,9 @@ function get_user_profile_data($params)
  */
 function get_one_time_product($params)
 {
+    $hostId = getHostIdFromInvoice($params['invoiceid']);
     return new Paymentwall_Product(
-        $params['invoiceid'],
+        $hostId,
         $params['amount'],
         $params['currency'],
         $params["description"],
@@ -162,16 +166,6 @@ function get_subscription_product($params, $recurring, &$hasTrial)
 }
 
 /**
- * @param $recurringCycleUnits
- * @return string
- */
-function get_period_type($recurringCycleUnits)
-{
-    $cycleUnits = strtoupper(substr($recurringCycleUnits, 0, 1));
-    return ($cycleUnits == 'Y') ? Paymentwall_Product::PERIOD_TYPE_YEAR : Paymentwall_Product::PERIOD_TYPE_MONTH;
-}
-
-/**
  * @param $widget
  * @param $params
  * @param $type
@@ -186,7 +180,7 @@ function get_widget_code($widget, $params, $type)
     return '<form method=POST action="' . $systemUrl . '/paymentwallwidget.php" style="display:inline;">
         <input type="hidden" name="data" value="' . encrypt($widget->getHtmlCode(array(
         'width' => '100%',
-        'height' => '500'
+        'height' => '650'
     ))) . '" />
             <input type="image" src="' . $systemUrl . '/images/paymentwall/' . $type . '.png" onClick="this.form.submit()"/>
     </form>';
