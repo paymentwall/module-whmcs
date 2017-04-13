@@ -23,10 +23,6 @@ function getHostIdFromInvoice($invoiceId) {
         return null;
 }
 
-function getDomainIdFromInvoice($invoiceId) {
-
-}
-
 function getRecurringBillingValuesFromInvoice($invoiceid) {
     global $CONFIG;
 

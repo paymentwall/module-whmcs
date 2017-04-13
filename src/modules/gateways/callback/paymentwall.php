@@ -36,22 +36,12 @@ if (!$gateway["type"]) {
 
 Paymentwall_Config::getInstance()->set([
     'api_type' => Paymentwall_Config::API_GOODS,
-    'private_key' => $gateway['secretKey'] // available in your Paymentwall merchant area
+    'private_key' => $gateway['isTest'] ? $gateway['privateTestKey'] : $gateway['secretKey'] // available in your Paymentwall merchant area
 ]);
 
 $pingback = new Paymentwall_Pingback($_GET, getRealClientIP());
-//echo $invoiceId;
 checkCbInvoiceID($invoiceId, $gateway["paymentmethod"]);
-if (!$pingback->validate(true)) {
-    if ($gateway['paymentmethod'] == 'brick') {
-        Paymentwall_Config::getInstance()->set([
-            'api_type' => Paymentwall_Config::API_GOODS,
-            'private_key' => $gateway['privateTestKey'] // available in your Paymentwall merchant area
-        ]);
-        $pingback = new Paymentwall_Pingback($_GET, getRealClientIP());
-    }
-}
-if ($pingback->validate(true)) {
+if ($pingback->validate()) {
     if ($invoiceId) {
         $userData = mysql_fetch_assoc(select_query('tblclients', 'email, firstname, lastname, country, address1, state, phonenumber, postcode, city, id', ["id" => $orderData['userid']]));
         if ($pingback->isDeliverable()) {
@@ -280,7 +270,7 @@ function getInvoiceIdPingback($requestData)
     FROM tblinvoiceitems 
     INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
     WHERE tblinvoiceitems.relid='" . (int)$relId . "' 
-        AND (tblinvoiceitems.type='Hosting' OR tblinvoiceitems.type='DomainRegister') AND ". $requestData['type'] == 2 ? "tblinvoices.status='Paid'" : "tblinvoices.status='Unpaid'". "
+        AND (tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_HOSTING."' OR tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_DOMAIN."') AND ". $requestData['type'] == 2 ? "tblinvoices.status='Paid'" : "tblinvoices.status='Unpaid'". "
     ORDER BY tblinvoices.id ASC";
     $result = full_query($query);
     $data = mysql_fetch_assoc($result);
