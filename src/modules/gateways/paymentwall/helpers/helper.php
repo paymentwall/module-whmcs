@@ -7,7 +7,7 @@ require_once(ROOTDIR . '/includes/api/paymentwall_api/lib/paymentwall.php');
 
 define('PW_WHMCS_ITEM_TYPE_HOSTING', 'Hosting');
 define('PW_WHMCS_ITEM_TYPE_CREDIT', 'AddFunds');
-
+define('PW_WHMCS_ITEM_TYPE_DOMAIN', 'DomainRegister');
 function get_period_type($recurringCycleUnits)
 {
     $cycleUnits = strtoupper(substr($recurringCycleUnits, 0, 1));
@@ -15,7 +15,7 @@ function get_period_type($recurringCycleUnits)
 }
 
 function getHostIdFromInvoice($invoiceId) {
-    $invoiceItems = select_query('tblinvoiceitems', '*', ["invoiceid" => $invoiceId, "type" => PW_WHMCS_ITEM_TYPE_HOSTING, "relid" => ["value"=>0, "sqltype" => "NEQ"]],"","","0,1");
+    $invoiceItems = select_query('tblinvoiceitems', '*', "", " invoiceid = {$invoiceId} AND (type = '".PW_WHMCS_ITEM_TYPE_HOSTING."' OR type ='".PW_WHMCS_ITEM_TYPE_DOMAIN."') AND relid != 0 ","","0,1");
     $item = mysql_fetch_assoc($invoiceItems);
     if(!empty($item))
         return $item['relid'];

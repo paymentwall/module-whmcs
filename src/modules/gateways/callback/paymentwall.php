@@ -263,8 +263,6 @@ function getRealClientIP()
 
 function getInvoiceIdPingback($requestData)
 {
-    // If Recurring payment - it's Service id
-    // If Onetime payment - it's real Invoice id
     $relId = $requestData['goodsid'];
     $refId = $requestData['ref'];
 
@@ -272,7 +270,7 @@ function getInvoiceIdPingback($requestData)
     FROM tblinvoiceitems 
     INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
     WHERE tblinvoiceitems.relid='" . (int)$relId . "' 
-        AND tblinvoiceitems.type='Hosting' AND ". $requestData['type'] == 2 ? "tblinvoices.status='Paid'" : "tblinvoices.status='Unpaid'". "
+        AND (tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_HOSTING."' OR tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_DOMAIN."') AND ". $requestData['type'] == 2 ? "tblinvoices.status='Paid'" : "tblinvoices.status='Unpaid'". "
     ORDER BY tblinvoices.id ASC";
     $result = full_query($query);
     $data = mysql_fetch_assoc($result);
@@ -288,7 +286,7 @@ function getInvoiceIdPingback($requestData)
         INNER JOIN tblinvoiceitems ON tblhosting.id=tblinvoiceitems.relid 
         INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
         WHERE ". $requestData['type'] == 2 ? "tblinvoices.status='Paid'" : "tblinvoices.status='Unpaid'". "
-            AND tblhosting.subscriptionid='" . db_escape_string($refId) . "' AND tblinvoiceitems.type='Hosting' 
+            AND tblhosting.subscriptionid='" . db_escape_string($refId) . "' AND tblinvoiceitems.type='Hosting'
         ORDER BY tblinvoiceitems.invoiceid ASC";
         $result = full_query($query);
         $data = mysql_fetch_assoc($result);
