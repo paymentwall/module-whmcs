@@ -82,7 +82,34 @@ function cancelSubscription($vars)
     }
 }
 
+function refundInvoice($vars) {
+    $invoiceId = $vars['invoiceid'];
+    if(isset($invoiceId)) {
+        require_once(ROOTDIR . '/modules/gateways/brick.php');
+        $invoiceData = mysql_fetch_assoc(select_query('tblinvoices', 'userid,total,paymentmethod', ["id" => $invoiceId]));
+        $gateway = getGatewayVariables($invoiceData['paymentmethod']);
+
+        if (empty($gateway["type"])) {
+            die($gateway['name'] . " is not activated");
+        }
+        if ($gateway['paymentmethod'] != 'brick')
+            return;
+
+        init_brick_config($gateway);
+
+        $result = select_query("tblaccounts", "transid", array("invoiceid" => $invoiceId));
+        $data = mysql_fetch_assoc($result);
+        if($data['transid']) {
+            $chargeId = preg_replace("/^([^0-9])*/", "", $data['transid']);
+            $charge = new Paymentwall_Charge($chargeId);
+            $charge->refund();
+        }
+    }
+}
+
 
 add_hook("AfterModuleCreate", 1, "afterSetupProductEventListener");
 
 add_hook("InvoiceCancelled", 1, "cancelSubscription");
+
+add_hook("InvoiceRefunded", 1, "refundInvoice");

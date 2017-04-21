@@ -143,7 +143,7 @@ function get_subscription_product($params, $recurring, &$hasTrial)
             $recurring['primaryserviceid'], // Pass hosting id instead of invoice
             $recurring['firstpaymentamount'],
             $params['currency'],
-            $params["description"] . ' + Setup Fee',
+            $params["description"] . ' - first time payment',
             Paymentwall_Product::TYPE_SUBSCRIPTION,
             $recurring['firstcycleperiod'],
             get_period_type($recurring['firstcycleunits']),
@@ -156,7 +156,7 @@ function get_subscription_product($params, $recurring, &$hasTrial)
         $recurring['primaryserviceid'],
         $recurring['recurringamount'],
         $params['currency'],
-        $params["description"],
+        $params["description"] . ' - recurring payment',
         Paymentwall_Product::TYPE_SUBSCRIPTION,
         $recurring['recurringcycleperiod'],
         get_period_type($recurring['recurringcycleunits']),

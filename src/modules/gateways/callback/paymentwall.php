@@ -270,7 +270,7 @@ function getInvoiceIdPingback($requestData)
     FROM tblinvoiceitems 
     INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
     WHERE tblinvoiceitems.relid='" . (int)$relId . "' 
-        AND (tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_HOSTING."' OR tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_DOMAIN."') AND ". $requestData['type'] == 2 ? "tblinvoices.status='Paid'" : "tblinvoices.status='Unpaid'". "
+        AND (tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_HOSTING."' OR tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_DOMAIN."') AND " . ($requestData['type'] == 2 ? "tblinvoices.status='Paid'" : "tblinvoices.status='Unpaid'") . "
     ORDER BY tblinvoices.id ASC";
     $result = full_query($query);
     $data = mysql_fetch_assoc($result);
