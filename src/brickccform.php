@@ -82,7 +82,7 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
                     $smartyvalues['success'] = true;
                 } elseif (isset($charge)) {
                     if ($charge->isCaptured()) {
-                        addInvoicePayment($invoiceId, $charge->getId(), null, null, 'brick');
+                        //addInvoicePayment($invoiceId, $charge->getId(), null, null, 'brick');
                     } elseif ($charge->isUnderReview()) {
                         // decide on risk charge
                     }
@@ -140,7 +140,7 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
     if ($paid) {
         if (isset($charge)) {
             if ($charge->isCaptured()) {
-                addInvoicePayment($invoiceData['invoiceid'], $charge->getId(), null, null, 'brick');
+                //addInvoicePayment($invoiceData['invoiceid'], $charge->getId(), null, null, 'brick');
                 unset($_SESSION['3dsecure']);
             } elseif ($charge->isUnderReview()) {
                 // decide on risk charge
