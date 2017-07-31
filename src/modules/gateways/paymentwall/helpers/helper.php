@@ -15,7 +15,7 @@ function get_period_type($recurringCycleUnits)
 }
 
 function getHostIdFromInvoice($invoiceId) {
-    $invoiceItems = select_query('tblinvoiceitems', '*', " invoiceid = {$invoiceId} AND (((type = '".PW_WHMCS_ITEM_TYPE_HOSTING."' OR type ='".PW_WHMCS_ITEM_TYPE_DOMAIN."') AND relid != 0) OR (type ='".PW_WHMCS_ITEM_TYPE_CREDIT."' AND relid = 0)) ","","","0,1");
+    $invoiceItems = select_query('tblinvoiceitems', '*', " invoiceid = {$invoiceId} AND (((type = '".PW_WHMCS_ITEM_TYPE_HOSTING."' OR type ='".PW_WHMCS_ITEM_TYPE_DOMAIN."') AND relid != 0) OR ((type ='".PW_WHMCS_ITEM_TYPE_CREDIT."' OR type = '')AND relid = 0)) ","","","0,1");
     $item = mysql_fetch_assoc($invoiceItems);
     if(!empty($item)) {
         if ($item['type'] == PW_WHMCS_ITEM_TYPE_CREDIT)
