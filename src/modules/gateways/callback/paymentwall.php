@@ -295,6 +295,20 @@ function getInvoiceIdPingback($requestData)
 
         if ($invoiceid) {
             $logMsg .= ("Invoice Found from Subscription ID Match => " . $invoiceid . "\r\n");
+        } else {
+            $query = "SELECT tblinvoices.id 
+            FROM tblinvoiceitems 
+            INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
+            WHERE tblinvoices.id='" . (int)$relId . "' 
+                AND (tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_CREDIT."'  OR (tblinvoiceitems.type='' AND tblinvoiceitems.relid=0)) AND ". ($requestData['type'] == 2 ? "tblinvoices.status='Paid'" : "tblinvoices.status='Unpaid'") . "
+            ORDER BY tblinvoices.id ASC";
+            $result = full_query($query);
+            $data = mysql_fetch_assoc($result);
+            $invoiceid = $data['id'];
+
+            if ($invoiceid) {
+                $logMsg .= ("Invoice Found from Invoice (Fund) ID Match => " . $invoiceid . "\r\n");
+            }
         }
     }
 
