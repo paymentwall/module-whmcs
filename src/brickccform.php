@@ -56,6 +56,7 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
                     $paid = 1;
                 }
             } else {
+                $hostIdArray = getHostIdFromInvoice($invoiceId);
                 $cardInfo = array(
                     'email' => $invoiceData['clientsdetails']['email'],
                     'amount' => $post['amount'],
@@ -63,7 +64,7 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
                     'token' => $_POST['brick_token'],
                     'fingerprint' => $_POST['brick_fingerprint'],
                     'description' => $invoiceData['pagetitle'],
-                    'plan' => getHostIdFromInvoice($invoiceId)
+                    'plan' => $hostIdArray['id'].":".$invoiceId.":".$hostIdArray['type']
                 );
                 $charge = create_charge($CONFIG, $invoiceData, $cardInfo);
                 $response = $charge->getPublicData();
@@ -256,7 +257,7 @@ function prepare_subscription_data($post,$invoiceData,$recurring) {
             'email' => $invoiceData['clientsdetails']['email'],
             'fingerprint' => $post['brick_fingerprint'],
             'description' => $post['description'],
-            'plan' => $recurring['primaryserviceid'],
+            'plan' => $recurring['primaryserviceid'].":".$invoiceData['invoiceid'].":".$recurring['primaryservicetype'],
             'period' => get_period_type($recurring['recurringcycleunits']),
             'period_duration' => $recurring['recurringcycleperiod'],
             'secure_token' => !empty($_POST['brick_secure_token']) ? $_POST['brick_secure_token'] : null,

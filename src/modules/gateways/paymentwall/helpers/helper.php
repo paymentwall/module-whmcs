@@ -8,6 +8,9 @@ require_once(ROOTDIR . '/includes/api/paymentwall_api/lib/paymentwall.php');
 define('PW_WHMCS_ITEM_TYPE_HOSTING', 'Hosting');
 define('PW_WHMCS_ITEM_TYPE_CREDIT', 'AddFunds');
 define('PW_WHMCS_ITEM_TYPE_DOMAIN', 'DomainRegister');
+define('PW_WHMCS_ITEM_TYPE_INVOICE', 'Invoice');
+define('PW_WHMCS_ITEM_TYPE_ADDON', 'Addon');
+
 function get_period_type($recurringCycleUnits)
 {
     $cycleUnits = strtoupper(substr($recurringCycleUnits, 0, 1));
@@ -15,13 +18,26 @@ function get_period_type($recurringCycleUnits)
 }
 
 function getHostIdFromInvoice($invoiceId) {
-    $invoiceItems = select_query('tblinvoiceitems', '*', " invoiceid = {$invoiceId} AND (((type = '".PW_WHMCS_ITEM_TYPE_HOSTING."' OR type ='".PW_WHMCS_ITEM_TYPE_DOMAIN."') AND relid != 0) OR ((type ='".PW_WHMCS_ITEM_TYPE_CREDIT."' OR type = '') AND relid = 0)) ","","","0,1");
-    $item = mysql_fetch_assoc($invoiceItems);
+    $query = "
+        SELECT * 
+        FROM tblinvoiceitems
+        WHERE invoiceid = {$invoiceId} 
+        AND (((type = '".PW_WHMCS_ITEM_TYPE_HOSTING."' OR type ='".PW_WHMCS_ITEM_TYPE_DOMAIN."' OR type = '".PW_WHMCS_ITEM_TYPE_INVOICE."' OR type = '".PW_WHMCS_ITEM_TYPE_ADDON."') AND relid != 0) 
+        OR ((type ='".PW_WHMCS_ITEM_TYPE_CREDIT."' OR type = '') AND relid = 0)) 
+    ";
+    $result = full_query($query);
+    $item = mysql_fetch_assoc($result);
     if(!empty($item)) {
         if ($item['type'] == PW_WHMCS_ITEM_TYPE_CREDIT || $item['type'] == '')
-            return $invoiceId;
+            return array(
+                'id' => $invoiceId,
+                'type' => $item['type']
+            );
         else
-            return $item['relid'];
+            return array(
+                'id' => $item['relid'],
+                'type' => $item['type']
+            );
     } else
         return null;
 }
@@ -35,13 +51,14 @@ function getRecurringBillingValuesFromInvoice($invoiceid) {
     $count = mysql_fetch_array($result);
     if($count['count_recurring'] > 1)
         return false;
-    $result = select_query("tblinvoiceitems", "tblinvoiceitems.relid,tblinvoiceitems.taxed,tblhosting.userid,tblhosting.amount,tblhosting.billingcycle,tblhosting.packageid,tblhosting.regdate,tblhosting.nextduedate", array("invoiceid" => $invoiceid, "type" => "Hosting"), "tblinvoiceitems`.`id", "ASC", "", "tblhosting ON tblhosting.id=tblinvoiceitems.relid");
+    $result = select_query("tblinvoiceitems", "tblinvoiceitems.relid,tblinvoiceitems.type,tblinvoiceitems.taxed,tblhosting.userid,tblhosting.amount,tblhosting.billingcycle,tblhosting.packageid,tblhosting.regdate,tblhosting.nextduedate", array("invoiceid" => $invoiceid, "type" => "Hosting"), "tblinvoiceitems`.`id", "ASC", "", "tblhosting ON tblhosting.id=tblinvoiceitems.relid");
     while($dat = mysql_fetch_array($result)) {
         if ($dat['billingcycle'] != 'One Time')
             $data = $dat;
     }
-//    $data = mysql_fetch_array($result);
+
     $relid = $data['relid'];
+    $relType = $data['type'];
     $taxed = $data['taxed'];
     $userid = $data['userid'];
     $recurringamount = $data['amount'];
@@ -192,5 +209,6 @@ function getRecurringBillingValuesFromInvoice($invoiceid) {
     $returndata['recurringcycleperiod'] = $recurringcycleperiod;
     $returndata['recurringcycleunits'] = $recurringcycleunits;
     $returndata['overdue'] = $overdue;
+    $returndata['primaryservicetype'] = $relType;
     return $returndata;
 }
