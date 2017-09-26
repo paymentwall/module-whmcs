@@ -117,9 +117,9 @@ function get_user_profile_data($params)
  */
 function get_one_time_product($params)
 {
-    $hostId = getHostIdFromInvoice($params['invoiceid']);
+    $hostIdArray = getHostIdFromInvoice($params['invoiceid']);
     return new Paymentwall_Product(
-        $hostId,
+        $hostIdArray['id'].":".$params['invoiceid'].":".$hostIdArray['type'],
         $params['amount'],
         $params['currency'],
         $params["description"],
@@ -140,7 +140,7 @@ function get_subscription_product($params, $recurring, &$hasTrial)
     if (isset($recurring['firstpaymentamount'])) {
         // Product + Setup Fee
         $trialProduct = new Paymentwall_Product(
-            $recurring['primaryserviceid'], // Pass hosting id instead of invoice
+            $recurring['primaryserviceid'].":".$params['invoiceid'].":".$recurring['primaryservicetype'], // Pass hosting id instead of invoice
             $recurring['firstpaymentamount'],
             $params['currency'],
             $params["description"] . ' - first time payment',
@@ -153,7 +153,7 @@ function get_subscription_product($params, $recurring, &$hasTrial)
     }
 
     return new Paymentwall_Product(
-        $recurring['primaryserviceid'],
+        $recurring['primaryserviceid'].":".$params['invoiceid'].":".$recurring['primaryservicetype'],
         $recurring['recurringamount'],
         $params['currency'],
         $params["description"] . ' - recurring payment',
