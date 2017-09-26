@@ -23,9 +23,9 @@ if (!$relId) {
 }
 
 $invoiceId = getInvoiceIdPingback($_GET);
-if($invoiceId === null) {
+if(empty($invoiceId)) {
     die("Invoice is not found");
-} elseif (is_string($invoiceId)) {
+} elseif ($invoiceId == 'Invoice is already paid') {
     die($invoiceId);
 }
 
@@ -44,7 +44,7 @@ Paymentwall_Config::getInstance()->set([
 
 $pingback = new Paymentwall_Pingback($_GET, getRealClientIP());
 checkCbInvoiceID($invoiceId, $gateway["paymentmethod"]);
-if ($pingback->validate()) {
+if ($pingback->validate(true)) {
     if ($invoiceId) {
         $userData = mysql_fetch_assoc(select_query('tblclients', 'email, firstname, lastname, country, address1, state, phonenumber, postcode, city, id', ["id" => $orderData['userid']]));
         if ($pingback->isDeliverable()) {
@@ -87,11 +87,11 @@ function processDeliverable($invoiceId, $pingback, $gateway, $userData, $orderDa
     $invoice = mysql_fetch_assoc(select_query('tblinvoices', '*', ['id' => $invoiceId]));
     $hosting = [];
 
-    if ($hostId = getHostIdFromInvoice($invoiceId)) {
+    if ($hostIdArray = getHostIdFromInvoice($invoiceId)) {
         $hosting = mysql_fetch_assoc(select_query(
             'tblhosting', // table name
             'tblhosting.id,tblhosting.username,tblhosting.packageid,tblhosting.userid', // fields name
-            ["tblhosting.id" => $hostId], // where conditions
+            ["tblhosting.id" => $hostIdArray['id']], // where conditions
             false, // order by
             false, // order by order
             1 // limit
@@ -266,60 +266,91 @@ function getRealClientIP()
 
 function getInvoiceIdPingback($requestData)
 {
-    $relId = $requestData['goodsid'];
-    $refId = $requestData['ref'];
-
-    $query = "SELECT tblinvoices.id, tblinvoices.userid, tblinvoices.status 
-    FROM tblinvoiceitems 
-    INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
-    WHERE tblinvoiceitems.relid='" . (int)$relId . "' 
-        AND (tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_HOSTING."' OR tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_DOMAIN."') " . ($requestData['type'] == 2 ? " AND tblinvoices.status='Paid'" : " ") . "
-    ORDER BY tblinvoices.id ASC";
-    $result = full_query($query);
-    $data = mysql_fetch_assoc($result);
-    $invoiceid = intval($data['id']);
-    $logMsg = '';
-
-    if ($invoiceid) {
-        $logMsg .= ("Invoice Found from Service ID Match => " . $invoiceid . "\r\n");
-    } else {
-        $query = "SELECT tblinvoiceitems.invoiceid,tblinvoices.userid, tblinvoices.status 
-        FROM tblhosting 
-        INNER JOIN tblinvoiceitems ON tblhosting.id=tblinvoiceitems.relid 
+    $goodsId = $requestData['goodsid'];
+    if (strpos($goodsId,":")===false) {
+        $relId = $goodsId;
+        $query = "SELECT tblinvoices.id, tblinvoices.userid, tblinvoices.status 
+        FROM tblinvoiceitems 
         INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
-        WHERE tblhosting.subscriptionid='" . db_escape_string($refId) . "' AND tblinvoiceitems.type='Hosting'
-        ". ($requestData['type'] == 2 ? " AND tblinvoices.status='Paid'" : " ") . "
-        ORDER BY tblinvoiceitems.invoiceid ASC";
+        WHERE tblinvoiceitems.relid='" . (int)$relId . "' 
+        AND (tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_HOSTING."' OR tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_DOMAIN."' OR tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_INVOICE."' OR tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_ADDON."') 
+        ORDER BY tblinvoices.id ASC";
         $result = full_query($query);
-        $data = mysql_fetch_assoc($result);
-        $invoiceid = intval($data['invoiceid']);
+        $invoiceList = array();
+        while ($data = mysql_fetch_assoc($result)) {
+            $invoiceList[] = $data;
+        }
 
-        if ($invoiceid) {
-            $logMsg .= ("Invoice Found from Subscription ID Match => " . $invoiceid . "\r\n");
-        } else {
+        if (!count($invoiceList)) {
             $query = "SELECT tblinvoices.id, tblinvoices.status 
             FROM tblinvoiceitems 
             INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
             WHERE tblinvoices.id='" . (int)$relId . "' 
-                AND (tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_CREDIT."'  OR (tblinvoiceitems.type='' AND tblinvoiceitems.relid=0)) ". ($requestData['type'] == 2 ? " AND tblinvoices.status='Paid'" : " ") . "
+            AND (tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_CREDIT."'  OR (tblinvoiceitems.type='' AND tblinvoiceitems.relid=0))
             ORDER BY tblinvoices.id ASC";
             $result = full_query($query);
-            $data = mysql_fetch_assoc($result);
-            $invoiceid = intval($data['id']);
-
-            if ($invoiceid) {
-                $logMsg .= ("Invoice Found from Invoice (Fund) ID Match => " . $invoiceid . "\r\n");
+            $invoiceList = array();
+            while ($data = mysql_fetch_assoc($result)) {
+                $invoiceList[] = $data;
             }
         }
-    }
+        $invoiceid = getInvoiceFromInvoiceList($invoiceList, $requestData);
+    } else {
+        $goodsArray = explode(":",$goodsId);
+        if ((int)$requestData['slength'] <= 0) {
+            $query = "
+                SELECT *
+                FROM tblinvoices i 
+                WHERE i.id = ".$goodsArray[1]."
+                LIMIT 0,1
+            ";
+            $result = full_query($query);
+            $data = mysql_fetch_assoc($result);
+            if ($data['status'] == 'Paid' && $requestData['type'] == 0)
+                return 'Invoice is already paid';
+            else
+                $invoiceid = $goodsArray[1];
+        } else {
+            $query = "
+                SELECT it.*, i.status
+                FROM tblinvoiceitems it
+                INNER JOIN tblinvoices i ON i.id=it.invoiceid
+                WHERE it.relid = ".$goodsArray[0]." 
+                AND it.invoiceid = ".$goodsArray[1]."
+                AND it.type = '".$goodsArray[2]."'
+                AND it.userid = '".$requestData['uid']."' 
+                ORDER BY i.id ASC
+            ";
+            $result = full_query($query);
+            $invoiceList = array();
+            while ($data = mysql_fetch_assoc($result)) {
+                $invoiceList[] = $data;
+            }
 
-
-    if ($data['status'] == 'Paid' && $requestData['type']!=2) {
-        $invoiceid = ('Invoice is already paid');
+            $invoiceid = getInvoiceFromInvoiceList($invoiceList, $requestData);
+        }
     }
 
     return $invoiceid;
 }
 
+function getInvoiceFromInvoiceList($invoiceList, $requestData) {
+    $invoiceid = null;
+    if (count($invoiceList <= 1)) {
+        if ($requestData['type'] == 0 && $invoiceList[0]['status'] == 'Paid')
+            $invoiceid = 'Invoice is already paid';
+        else
+            $invoiceid = $invoiceList[0]['invoiceid'];
+    } else {
+        foreach ($invoiceList as $inv) {
+            if (($requestData['type'] == 0 && $inv['status'] == 'Unpaid')
+                || ($requestData['type'] == 2 && $inv['status'] == 'Paid')) {
+                $invoiceid = $inv['invoiceid'];
+                break;
+            }
+        }
+    }
+    return $invoiceid;
+}
 
 die;
