@@ -1,4 +1,16 @@
 <?php
+# Required File Includes
+if (!file_exists("../../init.php")) {
+    // For v5.x
+    include("../../dbconnect.php");
+} else {
+    // For v6.x, v7.x
+    include("../../init.php");
+}
+
+include("../../includes/functions.php");
+include("../../includes/gatewayfunctions.php");
+include("../../includes/invoicefunctions.php");
 
 require_once(ROOTDIR . '/includes/api/paymentwall_api/lib/paymentwall.php');
 
