@@ -52,7 +52,7 @@ function handleProductAutoSetup($vars, $hosting = array(), $gateway = array())
 
 function afterSetupProductEventListener($vars)
 {
-    $gateway = getGatewayVariables("paymentwall");
+    $gateway = getGatewayVariablesByName("paymentwall");
 
     if (!isset($gateway['enableDeliveryApi']) || $gateway['enableDeliveryApi'] == '') {
         return;
@@ -78,7 +78,7 @@ function cancelSubscription($vars)
     if(isset($invoiceId)) {
         require_once(ROOTDIR . '/modules/gateways/brick.php');
         $invoiceData = mysql_fetch_assoc(select_query('tblinvoices', 'userid,total,paymentmethod', ["id" => $invoiceId]));
-        $gateway = getGatewayVariables($invoiceData['paymentmethod']);
+        $gateway = getGatewayVariablesByName($invoiceData['paymentmethod']);
 
         if (!$gateway["type"]) {
             die($gateway['name'] . " is not activated");
@@ -99,7 +99,7 @@ function refundInvoice($vars) {
     if(isset($invoiceId)) {
         require_once(ROOTDIR . '/modules/gateways/brick.php');
         $invoiceData = mysql_fetch_assoc(select_query('tblinvoices', 'userid,total,paymentmethod', ["id" => $invoiceId]));
-        $gateway = getGatewayVariables($invoiceData['paymentmethod']);
+        $gateway = getGatewayVariablesByName($invoiceData['paymentmethod']);
 
         if (empty($gateway["type"])) {
             die($gateway['name'] . " is not activated");
@@ -119,6 +119,11 @@ function refundInvoice($vars) {
     }
 }
 
+function getGatewayVariablesByName($gatewayName) {
+    $gwresult = select_query("tblpaymentgateways", "", array("gateway" => $gatewayName));
+    $data = mysql_fetch_array($gwresult);
+    return $data;
+}
 
 add_hook("AfterModuleCreate", 1, "afterSetupProductEventListener");
 
