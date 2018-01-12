@@ -120,9 +120,13 @@ function refundInvoice($vars) {
 }
 
 function getGatewayVariablesByName($gatewayName) {
+    $gateway = array();
     $gwresult = select_query("tblpaymentgateways", "", array("gateway" => $gatewayName));
-    $data = mysql_fetch_array($gwresult);
-    return $data;
+    while ($data = mysql_fetch_array($gwresult)) {
+        $gateway[$data["setting"]] = $data["value"];
+    }
+    
+    return $gateway;
 }
 
 add_hook("AfterModuleCreate", 1, "afterSetupProductEventListener");
