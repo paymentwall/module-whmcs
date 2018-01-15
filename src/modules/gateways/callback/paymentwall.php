@@ -338,15 +338,15 @@ function getInvoiceIdPingback($requestData)
 
 function getInvoiceFromInvoiceList($invoiceList, $requestData) {
     $invoiceid = null;
-    if (!empty($invoiceList) && count($invoiceList <= 1)) {
-        if ($requestData['type'] == 0 && $invoiceList[0]['status'] == 'Paid')
+    if (count($invoiceList) == 1) {
+        if ($requestData['type'] == 0 && $invoiceList[0]['status'] == 'Paid') {
             $invoiceid = 'Invoice is already paid';
-        else
+        } else {
             $invoiceid = $invoiceList[0]['invoiceid'];
+        }
     } else {
         foreach ($invoiceList as $inv) {
-            if (($requestData['type'] == 0 && $inv['status'] == 'Unpaid')
-                || ($requestData['type'] == 2 && $inv['status'] == 'Paid')) {
+            if (($requestData['type'] == 0 && $inv['status'] == 'Unpaid') || ($requestData['type'] == 2 && $inv['status'] == 'Paid')) {
                 $invoiceid = $inv['invoiceid'];
                 break;
             }
