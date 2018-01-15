@@ -269,10 +269,12 @@ function getInvoiceIdPingback($requestData)
     $goodsId = $requestData['goodsid'];
     if (strpos($goodsId,":")===false) {
         $relId = $goodsId;
+        $uid   = $requestData['uid'];
         $query = "SELECT tblinvoices.id, tblinvoices.userid, tblinvoices.status 
         FROM tblinvoiceitems 
         INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
         WHERE tblinvoiceitems.relid='" . (int)$relId . "' 
+        " . (!empty($uid) ? " AND tblinvoiceitems.userid = '" . (int)$uid. "' " : "") . "
         AND (tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_HOSTING."' OR tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_DOMAIN."' OR tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_INVOICE."' OR tblinvoiceitems.type='".PW_WHMCS_ITEM_TYPE_ADDON."') 
         ORDER BY tblinvoices.id ASC";
         $result = full_query($query);
@@ -336,15 +338,15 @@ function getInvoiceIdPingback($requestData)
 
 function getInvoiceFromInvoiceList($invoiceList, $requestData) {
     $invoiceid = null;
-    if (count($invoiceList <= 1)) {
-        if ($requestData['type'] == 0 && $invoiceList[0]['status'] == 'Paid')
+    if (count($invoiceList) == 1) {
+        if ($requestData['type'] == 0 && $invoiceList[0]['status'] == 'Paid') {
             $invoiceid = 'Invoice is already paid';
-        else
+        } else {
             $invoiceid = $invoiceList[0]['invoiceid'];
+        }
     } else {
         foreach ($invoiceList as $inv) {
-            if (($requestData['type'] == 0 && $inv['status'] == 'Unpaid')
-                || ($requestData['type'] == 2 && $inv['status'] == 'Paid')) {
+            if (($requestData['type'] == 0 && $inv['status'] == 'Unpaid') || ($requestData['type'] == 2 && $inv['status'] == 'Paid')) {
                 $invoiceid = $inv['invoiceid'];
                 break;
             }
