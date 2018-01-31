@@ -15,7 +15,7 @@
 			<td>
 				<form action="" method="POST">
 					<input type="hidden" name="brick_token" value="{$token->id}">
-					<button type="submit" class="btn btn-danger">Delete</button>
+					<button type="submit" onclick="return confirm('Do you want to remove this credit card?')" class="btn btn-danger">Delete</button>
 				</form>
 			</td>
 		</tr>
@@ -32,5 +32,4 @@
 	th, td {
 		text-align: center;
 	}
-
 </style>

@@ -52,7 +52,7 @@
 			</div>
 		</div>
 		<div class="col-md-7" style="margin-top: 20px;">
-			{if $sum_brick_token >= 1}
+			{if $sumBrickToken >= 1}
 			<div class="paymwentwall-brick-token">
 				<!-- list all token  -->
 				<ul style="list-style-type: none; font-size: 18px;">
@@ -110,7 +110,7 @@
 					</div>
 				</div>
 				
-				{if $savedCards=='on' && !$recurring}
+				{if $savedCards=='on' && !$isSubscription}
 					<div class="form-group">
 						<div class="col-sm-7" style="margin-left: 220px;">
 							<label name="save-brick-payment-token"><input type="checkbox" name="save-brick-payment-token" value="true" /> Save card</label>
@@ -135,7 +135,7 @@
 	<script src="https://api.paymentwall.com/brick/brick.1.4.js"></script>
 	<script type="text/javascript">
 		$(document).ready(function () {
-			var sum_brick_token = {$sum_brick_token};
+			var sumBrickToken = {$sumBrickToken};
 			var publicKey = '{$publicKey}';
 			
 			{literal}
@@ -160,7 +160,7 @@
 	        });
 
 			$form.submit(function (e) {
-				if (jQuery('input[name=brick-payment-token]:checked').val() == 'new' || sum_brick_token == 0) {
+				if (jQuery('input[name=brick-payment-token]:checked').val() == 'new' || sumBrickToken == 0) {
 					e.preventDefault();
 
 					brick.tokenizeCard({
@@ -214,8 +214,7 @@
 	.invoice-summary {
 		height: auto
 	}
-	label[name="brick-payment-token"]{
+	label[name="brick-payment-token"], label[name="save-brick-payment-token"]{
 		font-weight: 500;
 	}
-
 </style>

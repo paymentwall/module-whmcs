@@ -215,20 +215,20 @@ function getRecurringBillingValuesFromInvoice($invoiceid) {
 }
 
 //get token of current user by token id
-function get_tokens_by_user_id($userId)
+function getTokensByUserId($userId)
 {
     return Capsule::table('pw_payment_token')->where('user_id', $userId)->get();
 }
 
 //get value token by id
-function get_token_by_tokenId($tokenId)
+function getTokenById($tokenId)
 {
     return Capsule::table('pw_payment_token')->where('id', $tokenId)->first();
 }
 
-function delete_token_by_id($tokenId)
+function deleteToken($tokenId, $userId)
 {
-    Capsule::table('pw_payment_token')->where('id', $tokenId)->delete();
+    Capsule::table('pw_payment_token')->where('id', $tokenId)->where('user_id', $userId)->delete();
 }
 
 function getGatewayVariablesByName($gatewayName) {

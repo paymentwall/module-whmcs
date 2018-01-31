@@ -122,16 +122,16 @@ function refundInvoice($vars) {
     }
 }
 
-$brick_config = getGatewayVariablesByName('brick');
+$brickConfigs = getGatewayVariablesByName('brick');
 
-if ($_SESSION['uid'] && $brick_config) {
+if ($_SESSION['uid'] && $brickConfigs) {
     add_hook('ClientAreaPrimaryNavbar', 1, function($primaryNavbar) {
         if (!is_null($primaryNavbar->getChild('Billing'))) {
             /** @var \WHMCS\View\Menu\Item $primaryNavbar */
             $primaryNavbar->getChild('Billing')->addChild(
                 'uniqueMenuItemName',
                 array(
-                    'label' => 'Manage Credit Card (Brick)',
+                    'label' => 'Manage Credit Card (Paymentwall)',
                     'uri' => 'pwmanagecard.php',
                     'order' => 50
                 )
@@ -145,9 +145,23 @@ if ($_SESSION['uid'] && $brick_config) {
             $newMenu = $secondarySidebar->getChild('Billing')->addChild(
                 'uniqueMenuItemName',
                 array(
-                    'label' => 'Manage Credit Card (Brick)',
+                    'label' => 'Manage Credit Card (Paymentwall)',
                     'uri' => 'pwmanagecard.php',
                     'order' => 40
+                )
+            );
+        }
+    });
+
+    add_hook('ClientAreaSecondaryNavbar', 1, function($secondaryNavbar) {
+        /** @var \WHMCS\View\Menu\Item $secondaryNavbar */
+        if (!is_null($secondaryNavbar->getChild('Account'))) {
+            $newMenu = $secondaryNavbar->getChild('Account')->addChild(
+                'uniqueMenuItemName',
+                array(
+                    'label' => 'Manage Credit Card (Paymentwall)',
+                    'uri' => 'pwmanagecard.php',
+                    'order' => 20
                 )
             );
         }
