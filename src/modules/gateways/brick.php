@@ -25,7 +25,9 @@ function brick_config()
         "privateTestKey" => array("FriendlyName" => "Private Test Key", "Type" => "text", "Size" => "40"),
         "secretKey" => array("FriendlyName" => "Secret Key", "Type" => "text", "Size" => "40"),
         "isTest" => array("FriendlyName" => "Is Test", "Type" => "yesno", "Size" => "5"),
+        "savedCards" => array("FriendlyName" => "Saved Cards", "Type" => "yesno", "Size" => "5"),
     );
+
     return $configarray;
 }
 
@@ -46,7 +48,7 @@ function brick_link($params)
     $invoiceid = $params['invoiceid'];
 
     # Enter your code submit to the gateway...
-    $code = '<form method="post" action="' . $params['systemurl'] . '/brickccform.php">
+        $code = '<form method="post" action="' . $params['systemurl'] . '/brickccform.php">
             <input type="hidden" name="data" value="' . encrypt(json_encode(array(
             'invoiceid' => $params['invoiceid'],
             'description' => $params['description'],
@@ -57,5 +59,6 @@ function brick_link($params)
             <input type="hidden" name="frominvoice" value="true" />
             <button type="submit"><img src="' . $params['systemurl'] . '/images/paymentwall/brick_logo.png" alt="Pay via Brick" /></button>
             </form>';
+    
     return $code;
 }
