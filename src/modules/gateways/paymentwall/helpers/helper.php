@@ -4,6 +4,7 @@ if (!defined("WHMCS")) {
 }
 
 require_once(ROOTDIR . '/includes/api/paymentwall_api/lib/paymentwall.php');
+use Illuminate\Database\Capsule\Manager as Capsule;
 
 define('PW_WHMCS_ITEM_TYPE_HOSTING', 'Hosting');
 define('PW_WHMCS_ITEM_TYPE_CREDIT', 'AddFunds');
@@ -211,4 +212,31 @@ function getRecurringBillingValuesFromInvoice($invoiceid) {
     $returndata['overdue'] = $overdue;
     $returndata['primaryservicetype'] = $relType;
     return $returndata;
+}
+
+//get token of current user by token id
+function getTokensByUserId($userId)
+{
+    return Capsule::table('pw_payment_token')->where('user_id', $userId)->get();
+}
+
+//get value token by id
+function getTokenById($tokenId)
+{
+    return Capsule::table('pw_payment_token')->where('id', $tokenId)->first();
+}
+
+function deleteToken($tokenId, $userId)
+{
+    Capsule::table('pw_payment_token')->where('id', $tokenId)->where('user_id', $userId)->delete();
+}
+
+function getGatewayVariablesByName($gatewayName) {
+    $gateway = array();
+    $gwresult = select_query("tblpaymentgateways", "", array("gateway" => $gatewayName));
+    while ($data = mysql_fetch_array($gwresult)) {
+        $gateway[$data["setting"]] = $data["value"];
+    }
+    
+    return $gateway;
 }
