@@ -18,7 +18,10 @@ if ($whmcsVer <= 5) {
 } else {
     $gateways = new WHMCS\Gateways();
 }
+
 $publicKey = $gateway['isTest'] ? $gateway['publicTestKey'] : $gateway['publicKey'];
+$savedCards = $gateway['savedCards'];
+
 Paymentwall_Config::getInstance()->set(array(
     'api_type' => Paymentwall_Config::API_GOODS,
     'public_key' => $publicKey, // available in your Paymentwall merchant area
@@ -27,31 +30,44 @@ Paymentwall_Config::getInstance()->set(array(
 
 $pagetitle = $_LANG['clientareatitle'] . ' - Pay via Brick (Powered by Paymentwall)';
 initialiseClientArea($pagetitle, '', 'Pay via Brick');
+$tokens = getTokensByUserId($_SESSION['uid']);
+$sumBrickToken = count($tokens);
 
 # Check login status
 if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_POST['data']), true)) {
 
     $smartyvalues = array_merge($smartyvalues, $post);
+    
     $smartyvalues['data'] = $_POST['data'];
-
+    
+    
     if ($_POST['frominvoice'] == 'true' || $_POST['fromCCForm'] == 'true') {
-
         $invoice = get_invoice($CONFIG);
         $invoiceId = $_POST['invoiceid'];
         $invoice->setID($invoiceId);
         $invoiceData = $invoice->getOutput();
+        $recurring = getRecurringBillingValuesFromInvoice($invoiceId);
 
-        $smartyvalues = array_merge($smartyvalues, get_smarty_values($invoice, $invoiceData, $gateways, $publicKey, $whmcsVer));
+
+        $smartyvalues = array_merge($smartyvalues, get_smarty_values($invoice, $invoiceData, $gateways, $publicKey, $whmcsVer, $savedCards, $tokens, $sumBrickToken, $recurring));
 
         if ($_POST['fromCCForm'] == 'true') { # Check form submit & capture payment
-            $recurring = getRecurringBillingValuesFromInvoice($invoiceId);
             $paid = 0;
+
+            if ($_POST['brick_token'] && $_POST['brick_fingerprint']) {
+                $brick_token = $_POST['brick_token'];
+                $brick_fingerprint = $_POST['brick_fingerprint'];
+            } elseif($_POST['brick-payment-token'] != 'new') {
+                $brick_token = getTokenById((int)$_POST['brick-payment-token'])->token;
+            }
+
             if (!empty($recurring)) {
-                $post['brick_token'] = $_POST['brick_token'];
-                $post['brick_fingerprint'] = $_POST['brick_fingerprint'];
+                $post['brick_token'] = $brick_token;
+                $post['brick_fingerprint'] = $brick_fingerprint;
                 $subscription = create_subscription($CONFIG,$invoiceData,$recurring,$post);
                 $response = $subscription->getPublicData();
                 $responseData = json_decode($subscription->getRawResponseData(), true);
+               
                 if ($subscription->isSuccessful() && empty($responseData['secure'])) {
                     $paid = 1;
                 }
@@ -61,15 +77,29 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
                     'email' => $invoiceData['clientsdetails']['email'],
                     'amount' => $post['amount'],
                     'currency' => $post['currency'],
-                    'token' => $_POST['brick_token'],
-                    'fingerprint' => $_POST['brick_fingerprint'],
+                    'token' => $brick_token,
+                    'fingerprint' => $brick_fingerprint,
                     'description' => $invoiceData['pagetitle'],
-                    'plan' => $hostIdArray['id'].":".$invoiceId.":".$hostIdArray['type']
+                    'plan' => $hostIdArray['id'].":".$invoiceId.":".$hostIdArray['type'],
+                    'browser_ip' => $_SERVER['REMOTE_ADDR'],
+                    'browser_domain' => $_SERVER['HTTP_HOST']
                 );
                 $charge = create_charge($CONFIG, $invoiceData, $cardInfo);
                 $response = $charge->getPublicData();
                 $responseData = json_decode($charge->getRawResponseData(), true);
+                
                 if ($charge->isSuccessful() && empty($responseData['secure'])) {
+                    if ($_POST['save-brick-payment-token'] && ($_POST['brick-payment-token'] == 'new' || $_POST['brick-payment-token'] == null)) {
+                        insert_query('pw_payment_token', array(
+                            'user_id' => $_SESSION['uid'],
+                            'gateway_id' => $gateway['paymentmethod'],
+                            'token' => $responseData['card']['token'],
+                            'card_type' => $responseData['card']['type'],
+                            'cardlastfour' => $responseData['card']['last4'],
+                            'expiry_month' => $responseData['card']['exp_month'],
+                            'expiry_year' => $responseData['card']['exp_year']
+                        ));
+                    }
                     $paid = 1;
                 }
             }
@@ -92,9 +122,12 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
                 }
             } elseif (!empty($responseData['secure'])) {
                 $smartyvalues['formHTML'] = $responseData['secure']['formHTML'] . "<script>document.forms[0].submit();</script>";
+                
                 $_SESSION['3dsecure'] = array(
                     'invoiceData' => $invoiceData,
-                    'postData' => $_POST['data']
+                    'postData' => $_POST['data'],
+                    'brick_payment_token' => $_POST['brick-payment-token'],
+                    'save_brick_payment_token' => $_POST['save-brick-payment-token']
                 );
                 if (!empty($recurring)) {
                     $_SESSION['3dsecure']['recurring'] = $recurring;
@@ -114,26 +147,41 @@ if ($_SESSION['uid'] && isset($_POST['data']) && $post = json_decode(decrypt($_P
 } elseif (isset($_POST['brick_secure_token']) && isset($_POST['brick_charge_id'])) {
     $secureData = $_SESSION['3dsecure'];
     $smartyvalues['data'] = $secureData['postData'];
-
     $invoice = get_invoice($CONFIG);
     $invoiceData = $secureData['invoiceData'];
     $invoice->setID($invoiceData['invoiceid']);
+    $recurring = getRecurringBillingValuesFromInvoice($invoiceData['invoiceid']);
 
-    $smartyvalues = array_merge($smartyvalues, get_smarty_values($invoice, $invoiceData, $gateways, $publicKey, $whmcsVer));
-
+    $smartyvalues = array_merge($smartyvalues, get_smarty_values($invoice, $invoiceData, $gateways, $publicKey, $whmcsVer, $savedCards, $tokens, $sumBrickToken, $recurring));
     $paid = 0;
+
     if (isset($secureData['cardInfo'])) {
         $cardInfo = $secureData['cardInfo'];
         $cardInfo['charge_id'] = $_POST['brick_charge_id'];
         $cardInfo['secure_token'] = $_POST['brick_secure_token'];
         $charge = create_charge($CONFIG, $invoiceData, $cardInfo);
         $response = $charge->getPublicData();
+        $responseData = json_decode($charge->getRawResponseData(), true);
+        
         if ($charge->isSuccessful()) {
+            if ($secureData['save_brick_payment_token'] && ($secureData['brick_payment_token'] == 'new' || $secureData['brick_payment_token'] == null)) {
+                insert_query('pw_payment_token', array(
+                    'user_id' => $_SESSION['uid'],
+                    'gateway_id' => $gateway['paymentmethod'],
+                    'token' => $responseData['card']['token'],
+                    'card_type' => $responseData['card']['type'],
+                    'cardlastfour' => $responseData['card']['last4'],
+                    'expiry_month' => $responseData['card']['exp_month'],
+                    'expiry_year' => $responseData['card']['exp_year']
+                ));
+            }
+            
             $paid = 1;
         }
     } elseif (isset($secureData['recurring'])) {
         $subscription = create_subscription($CONFIG,$invoiceData,$secureData['recurring'],$secureData['post']);
         $response = $subscription->getPublicData();
+        $responseData = json_decode($subscription->getRawResponseData(), true);
         if ($subscription->isSuccessful()) {
             $paid = 1;
         }
@@ -205,7 +253,7 @@ function get_invoice($config)
     return $invoice;
 }
 
-function get_smarty_values($invoice, $invoiceData, $gateways, $publicKey, $whmcsVer)
+function get_smarty_values($invoice, $invoiceData, $gateways, $publicKey, $whmcsVer, $savedCards, $tokens, $sumBrickToken, $recurring)
 {
     return array(
         'client' => $invoiceData['clientsdetails'],
@@ -217,8 +265,11 @@ function get_smarty_values($invoice, $invoiceData, $gateways, $publicKey, $whmcs
         'whmcsVer' => $whmcsVer,
         'publicKey' => $publicKey,
         'processingerror' => '',
-        'success' => false
-    );
+        'success' => false,
+        'savedCards' => $savedCards,
+        'tokens' => $tokens,
+        'sumBrickToken' => $sumBrickToken,
+        'isSubscription' => !empty($recurring) ? 1 : 0
 }
 
 function create_charge($config, $invoiceData, $cardInfo)
