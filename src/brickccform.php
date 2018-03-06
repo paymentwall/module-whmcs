@@ -270,6 +270,7 @@ function get_smarty_values($invoice, $invoiceData, $gateways, $publicKey, $whmcs
         'tokens' => $tokens,
         'sumBrickToken' => $sumBrickToken,
         'isSubscription' => !empty($recurring) ? 1 : 0
+    );
 }
 
 function create_charge($config, $invoiceData, $cardInfo)
