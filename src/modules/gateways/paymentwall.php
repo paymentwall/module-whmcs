@@ -9,7 +9,7 @@
  * Author URI: http://www.paymentwall.com/
  * License: The MIT License (MIT)
  *
- */8
+ */
 if (!defined("WHMCS")) {
     exit("This file cannot be accessed directly");
 }
