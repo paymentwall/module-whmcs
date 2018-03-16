@@ -342,12 +342,12 @@ function getInvoiceFromInvoiceList($invoiceList, $requestData) {
         if ($requestData['type'] == 0 && $invoiceList[0]['status'] == 'Paid') {
             $invoiceid = 'Invoice is already paid';
         } else {
-            $invoiceid = $invoiceList[0]['invoiceid'];
+            $invoiceid = $invoiceList[0]['id'];
         }
     } else {
         foreach ($invoiceList as $inv) {
             if (($requestData['type'] == 0 && $inv['status'] == 'Unpaid') || ($requestData['type'] == 2 && $inv['status'] == 'Paid')) {
-                $invoiceid = $inv['invoiceid'];
+                $invoiceid = $inv['id'];
                 break;
             }
         }
