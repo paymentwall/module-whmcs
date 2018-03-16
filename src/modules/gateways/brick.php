@@ -4,7 +4,7 @@
  * Plugin Name: Paymentwall for WHMCS
  * Plugin URI: https://docs.paymentwall.com/modules/whmcs
  * Description: Official Paymentwall module for Prestashop.
- * Version: v1.5.8
+ * Version: v1.5.9
  * Author: The Paymentwall Team
  * Author URI: http://www.paymentwall.com/
  * License: The MIT License (MIT)
