@@ -270,7 +270,7 @@ function getInvoiceIdPingback($requestData)
     if (strpos($goodsId,":")===false) {
         $relId = $goodsId;
         $uid   = $requestData['uid'];
-        $query = "SELECT tblinvoices.id, tblinvoices.userid, tblinvoices.status 
+        $query = "SELECT tblinvoices.id as invoiceid, tblinvoices.userid, tblinvoices.status 
         FROM tblinvoiceitems 
         INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
         WHERE tblinvoiceitems.relid='" . (int)$relId . "' 
@@ -284,7 +284,7 @@ function getInvoiceIdPingback($requestData)
         }
 
         if (!count($invoiceList)) {
-            $query = "SELECT tblinvoices.id, tblinvoices.status 
+            $query = "SELECT tblinvoices.id as invoiceid, tblinvoices.status 
             FROM tblinvoiceitems 
             INNER JOIN tblinvoices ON tblinvoices.id=tblinvoiceitems.invoiceid 
             WHERE tblinvoices.id='" . (int)$relId . "' 
@@ -342,12 +342,12 @@ function getInvoiceFromInvoiceList($invoiceList, $requestData) {
         if ($requestData['type'] == 0 && $invoiceList[0]['status'] == 'Paid') {
             $invoiceid = 'Invoice is already paid';
         } else {
-            $invoiceid = $invoiceList[0]['id'];
+            $invoiceid = $invoiceList[0]['invoiceid'];
         }
     } else {
         foreach ($invoiceList as $inv) {
             if (($requestData['type'] == 0 && $inv['status'] == 'Unpaid') || ($requestData['type'] == 2 && $inv['status'] == 'Paid')) {
-                $invoiceid = $inv['id'];
+                $invoiceid = $inv['invoiceidid'];
                 break;
             }
         }
