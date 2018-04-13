@@ -318,7 +318,6 @@ function getInvoiceIdPingback($requestData)
                 FROM tblinvoiceitems it
                 INNER JOIN tblinvoices i ON i.id=it.invoiceid
                 WHERE it.relid = ".$goodsArray[0]." 
-                AND it.invoiceid = ".$goodsArray[1]."
                 AND it.type = '".$goodsArray[2]."'
                 AND it.userid = '".$requestData['uid']."' 
                 ORDER BY i.id ASC
@@ -347,7 +346,7 @@ function getInvoiceFromInvoiceList($invoiceList, $requestData) {
     } else {
         foreach ($invoiceList as $inv) {
             if (($requestData['type'] == 0 && $inv['status'] == 'Unpaid') || ($requestData['type'] == 2 && $inv['status'] == 'Paid')) {
-                $invoiceid = $inv['invoiceidid'];
+                $invoiceid = $inv['invoiceid'];
                 break;
             }
         }
