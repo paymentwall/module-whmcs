@@ -44,7 +44,7 @@ Paymentwall_Config::getInstance()->set([
 
 $pingback = new Paymentwall_Pingback($_GET, getRealClientIP());
 checkCbInvoiceID($invoiceId, $gateway["paymentmethod"]);
-if ($pingback->validate()) {
+if ($pingback->validate(true)) {
     if ($invoiceId) {
         $userData = mysql_fetch_assoc(select_query('tblclients', 'email, firstname, lastname, country, address1, state, phonenumber, postcode, city, id', ["id" => $orderData['userid']]));
         if ($pingback->isDeliverable()) {
