@@ -86,6 +86,15 @@ function cancelSubscription($vars)
         if (!$gateway["type"]) {
             die($gateway['name'] . " is not activated");
         }
+
+        if ($invoiceData['paymentmethod'] == 'paymentwall') {
+            return cancellPWInvoice($gateway, $invoiceId, 2);
+        }
+
+        if ($invoiceData['paymentmethod'] != 'brick') {
+            return;
+        }
+
         init_brick_config($gateway);
 
         $result = select_query("tblaccounts", "transid", array("invoiceid" => $invoiceId));
@@ -107,8 +116,14 @@ function refundInvoice($vars) {
         if (empty($gateway["type"])) {
             die($gateway['name'] . " is not activated");
         }
-        if ($gateway['paymentmethod'] != 'brick')
+
+        if ($invoiceData['paymentmethod'] == 'paymentwall') {
+            return cancellPWInvoice($gateway, $invoiceId);
+        }
+
+        if ($invoiceData['paymentmethod'] != 'brick') {
             return;
+        }
 
         init_brick_config($gateway);
 
@@ -166,6 +181,45 @@ if ($_SESSION['uid'] && $brickConfigs) {
             );
         }
     });
+}
+
+function cancellPWInvoice($gateway, $invoiceId, $type = 1) {
+    $result = select_query("tblaccounts", "transid", array("invoiceid" => $invoiceId));
+    $data = mysql_fetch_assoc($result);
+
+    require_once(ROOTDIR . '/includes/api/paymentwall_api/lib/paymentwall.php');
+    require_once(ROOTDIR . '/modules/gateways/paymentwall/helpers/helper.php');
+    Paymentwall_Config::getInstance()->set(array(
+        'api_base_url' => 'https://api.paymentwall.com/developers/api',
+        'public_key' => $gateway['appKey'], // available in your Paymentwall merchant area
+        'private_key' => $gateway['secretKey'] // available in your Paymentwall merchant area,
+
+    ));
+    $params = array(
+        'key' => $gateway['appKey'],
+        'ref' => $data['transid'],
+        'type' => $type,
+        'message' => 'Please cancel asap',
+        'test_mode' => $gateway['isTest'] == 'on' ? 1 : 0 // pass 1 to perform tests without an actual transaction
+    );
+    $params['sign'] = generateCancellationSignature($params, $gateway['secretKey']);
+
+    $api = new Paymentwall_GenerericApiObject('ticket');
+    return $api->post($params);
+}
+
+function generateCancellationSignature($params, $secret) {
+    // work with sorted data
+    ksort($params);
+
+    // generate the base string
+    $baseString = '';
+    foreach($params as $key => $value) {
+        $baseString .= $key . '=' . $value;
+    }
+    $baseString .= $secret;
+
+    return strtolower(md5($baseString));
 }
 
 
