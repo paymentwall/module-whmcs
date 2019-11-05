@@ -170,7 +170,7 @@ function getRecurringBillingValuesFromInvoice($invoiceid) {
             require ROOTDIR . "/includes/invoicefunctions.php";
         }
 
-        $proratavals = getProrataValues($billingcycle, 0, $proratadate, $proratachargenextmonth, $orderday, $ordermonth, $orderyear);
+        $proratavals = getProrataValues($billingcycle, 0, $proratadate, $proratachargenextmonth, $orderday, $ordermonth, $orderyear, $userid);
         $firstcycleperiod = $proratavals['days'];
         $firstcycleunits = "Days";
     }
