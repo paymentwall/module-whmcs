@@ -46,6 +46,11 @@ function getHostIdFromInvoice($invoiceId) {
 function getRecurringBillingValuesFromInvoice($invoiceid) {
     global $CONFIG;
 
+    if( !function_exists("getBillingCycleMonths") ) 
+    {
+        include_once(ROOTDIR . "/includes/invoicefunctions.php");
+    }
+
     $firstcycleperiod = $firstcycleunits = "";
     $invoiceid = (int)$invoiceid;
     $result = select_query("tblinvoiceitems", "count(tblinvoiceitems.relid) as count_recurring", array("invoiceid" => $invoiceid, "type" => "Hosting", "billingcycle" => array("sqltype" => "NEQ", "value" => "One Time")), "tblinvoiceitems`.`id", "ASC", "", "tblhosting ON tblhosting.id=tblinvoiceitems.relid");
@@ -170,7 +175,7 @@ function getRecurringBillingValuesFromInvoice($invoiceid) {
             require ROOTDIR . "/includes/invoicefunctions.php";
         }
 
-        $proratavals = getProrataValues($billingcycle, 0, $proratadate, $proratachargenextmonth, $orderday, $ordermonth, $orderyear);
+        $proratavals = getProrataValues($billingcycle, 0, $proratadate, $proratachargenextmonth, $orderday, $ordermonth, $orderyear, $userid);
         $firstcycleperiod = $proratavals['days'];
         $firstcycleunits = "Days";
     }
